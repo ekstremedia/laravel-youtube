@@ -2,8 +2,11 @@
 
 A modern, comprehensive Laravel package for YouTube API v3 integration with OAuth2 authentication, automatic token refresh, and a beautiful dark-purple themed admin panel.
 
-![Laravel](https://img.shields.io/badge/Laravel-12%2B-red)
-![PHP](https://img.shields.io/badge/PHP-8.2%2B-blue)
+[![Tests](https://github.com/ekstremedia/laravel-youtube/actions/workflows/tests.yml/badge.svg)](https://github.com/ekstremedia/laravel-youtube/actions/workflows/tests.yml)
+[![Compatibility](https://github.com/ekstremedia/laravel-youtube/actions/workflows/compatibility.yml/badge.svg)](https://github.com/ekstremedia/laravel-youtube/actions/workflows/compatibility.yml)
+[![codecov](https://codecov.io/gh/ekstremedia/laravel-youtube/branch/main/graph/badge.svg)](https://codecov.io/gh/ekstremedia/laravel-youtube)
+![Laravel](https://img.shields.io/badge/Laravel-11%2B%20%7C%2012%2B-red)
+![PHP](https://img.shields.io/badge/PHP-8.2%20%7C%208.3-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ## Features

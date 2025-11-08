@@ -25,3 +25,6 @@ yarn.lock
 .phpstan/
 /build/
 /dist/
+coverage.xml
+.phpunit.result.cache
+.phpunit.cache/

@@ -23,7 +23,17 @@
         <include>
             <directory>src</directory>
         </include>
+        <exclude>
+            <directory>src/View/Components</directory>
+        </exclude>
     </source>
+    <coverage>
+        <report>
+            <html outputDirectory="build/coverage"/>
+            <text outputFile="build/coverage.txt"/>
+            <clover outputFile="coverage.xml"/>
+        </report>
+    </coverage>
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_KEY" value="base64:test-key-for-testing-purposes-only"/>

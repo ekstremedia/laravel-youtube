@@ -20,9 +20,9 @@
         "google/apiclient-services": "^0.350"
     },
     "require-dev": {
-        "orchestra/testbench": "^9.0",
-        "pestphp/pest": "^2.34",
-        "pestphp/pest-plugin-laravel": "^2.3",
+        "orchestra/testbench": "^9.0|^10.0",
+        "pestphp/pest": "^2.34|^3.0",
+        "pestphp/pest-plugin-laravel": "^2.3|^3.0",
         "laravel/pint": "^1.13",
         "phpstan/phpstan": "^1.10"
     },

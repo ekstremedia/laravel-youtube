@@ -2,16 +2,17 @@
 
 namespace EkstreMedia\LaravelYouTube\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Casts\Attribute;
-use Carbon\Carbon;
 
 class YouTubeToken extends Model
 {
     use HasFactory;
+
     /**
      * The table associated with the model.
      *
@@ -77,6 +78,7 @@ class YouTubeToken extends Model
     {
         // Use configured user model or fall back to Illuminate's default
         $userModel = config('auth.providers.users.model', \Illuminate\Foundation\Auth\User::class);
+
         return $this->belongsTo($userModel);
     }
 
@@ -90,8 +92,6 @@ class YouTubeToken extends Model
 
     /**
      * Check if token is expired.
-     *
-     * @return Attribute
      */
     protected function isExpired(): Attribute
     {
@@ -102,8 +102,6 @@ class YouTubeToken extends Model
 
     /**
      * Check if token will expire soon (within 5 minutes).
-     *
-     * @return Attribute
      */
     protected function expiresSoon(): Attribute
     {
@@ -114,8 +112,6 @@ class YouTubeToken extends Model
 
     /**
      * Get the time until expiration.
-     *
-     * @return Attribute
      */
     protected function expiresInMinutes(): Attribute
     {
@@ -126,20 +122,16 @@ class YouTubeToken extends Model
 
     /**
      * Check if token has error.
-     *
-     * @return Attribute
      */
     protected function hasError(): Attribute
     {
         return Attribute::make(
-            get: fn () => !empty($this->error),
+            get: fn () => ! empty($this->error),
         );
     }
 
     /**
      * Get formatted channel info.
-     *
-     * @return Attribute
      */
     protected function channelInfo(): Attribute
     {
@@ -157,7 +149,7 @@ class YouTubeToken extends Model
     /**
      * Scope a query to only include active tokens.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeActive($query)
@@ -168,7 +160,7 @@ class YouTubeToken extends Model
     /**
      * Scope a query to only include expired tokens.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeExpired($query)
@@ -179,8 +171,8 @@ class YouTubeToken extends Model
     /**
      * Scope a query to only include tokens expiring soon.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $minutes Minutes until expiration
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  int  $minutes  Minutes until expiration
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeExpiringSoon($query, int $minutes = 5)
@@ -191,10 +183,10 @@ class YouTubeToken extends Model
     /**
      * Scope a query to only include tokens with errors.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeWithError($query)
+    public function scopeWithError($query): \Illuminate\Database\Eloquent\Builder
     {
         return $query->whereNotNull('error');
     }
@@ -202,8 +194,7 @@ class YouTubeToken extends Model
     /**
      * Scope a query to only include tokens for a specific channel.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $channelId
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeForChannel($query, string $channelId)
@@ -214,8 +205,7 @@ class YouTubeToken extends Model
     /**
      * Scope a query to only include tokens for a specific user.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $userId
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeForUser($query, int $userId)
@@ -225,8 +215,6 @@ class YouTubeToken extends Model
 
     /**
      * Mark token as refreshed.
-     *
-     * @return void
      */
     public function markAsRefreshed(): void
     {
@@ -241,8 +229,7 @@ class YouTubeToken extends Model
     /**
      * Mark token as failed.
      *
-     * @param string $error Error message
-     * @return void
+     * @param  string  $error  Error message
      */
     public function markAsFailed(string $error): void
     {
@@ -255,8 +242,6 @@ class YouTubeToken extends Model
 
     /**
      * Deactivate the token.
-     *
-     * @return void
      */
     public function deactivate(): void
     {
@@ -265,8 +250,6 @@ class YouTubeToken extends Model
 
     /**
      * Activate the token.
-     *
-     * @return void
      */
     public function activate(): void
     {

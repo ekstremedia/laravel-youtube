@@ -2,14 +2,13 @@
 
 namespace EkstreMedia\LaravelYouTube\Http\Controllers\Admin;
 
-use Illuminate\Http\Request;
-use Illuminate\View\View;
-use Illuminate\Support\Facades\Auth;
 use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
+use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
 use EkstreMedia\LaravelYouTube\Services\TokenManager;
 use EkstreMedia\LaravelYouTube\Services\YouTubeService;
-use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
@@ -25,9 +24,6 @@ class DashboardController extends Controller
 
     /**
      * Create a new controller instance
-     *
-     * @param TokenManager $tokenManager
-     * @param YouTubeService $youtubeService
      */
     public function __construct(TokenManager $tokenManager, YouTubeService $youtubeService)
     {
@@ -37,9 +33,6 @@ class DashboardController extends Controller
 
     /**
      * Display the admin dashboard
-     *
-     * @param Request $request
-     * @return View
      */
     public function index(Request $request): View
     {
@@ -70,7 +63,7 @@ class DashboardController extends Controller
         $channels = [];
         foreach ($tokens as $token) {
             try {
-                if ($token->is_active && !$token->has_error) {
+                if ($token->is_active && ! $token->has_error) {
                     $channelData = [
                         'token_id' => $token->id,
                         'id' => $token->channel_id,
@@ -84,7 +77,7 @@ class DashboardController extends Controller
                     ];
 
                     // Try to get fresh channel stats if token is valid
-                    if (!$this->tokenManager->needsRefresh($token)) {
+                    if (! $this->tokenManager->needsRefresh($token)) {
                         try {
                             $freshData = $this->youtubeService
                                 ->withToken($token)

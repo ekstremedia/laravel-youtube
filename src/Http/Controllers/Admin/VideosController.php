@@ -2,13 +2,13 @@
 
 namespace EkstreMedia\LaravelYouTube\Http\Controllers\Admin;
 
+use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
+use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
+use EkstreMedia\LaravelYouTube\Services\YouTubeService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
-use Illuminate\Http\RedirectResponse;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
-use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
 
 class VideosController extends Controller
 {
@@ -128,7 +128,7 @@ class VideosController extends Controller
             $updatedData = $this->youtubeService
                 ->withToken($video->token)
                 ->updateVideo($video->video_id, $request->only([
-                    'title', 'description', 'tags', 'privacy_status', 'category_id'
+                    'title', 'description', 'tags', 'privacy_status', 'category_id',
                 ]));
 
             // Update local record

@@ -2,15 +2,16 @@
 
 namespace EkstreMedia\LaravelYouTube\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class YouTubeVideo extends Model
 {
     use HasFactory;
+
     /**
      * The table associated with the model.
      *
@@ -107,6 +108,7 @@ class YouTubeVideo extends Model
     {
         // Use configured user model or fall back to Illuminate's default
         $userModel = config('auth.providers.users.model', \Illuminate\Foundation\Auth\User::class);
+
         return $this->belongsTo($userModel);
     }
 
@@ -120,8 +122,6 @@ class YouTubeVideo extends Model
 
     /**
      * Get the YouTube watch URL.
-     *
-     * @return Attribute
      */
     protected function watchUrl(): Attribute
     {
@@ -132,8 +132,6 @@ class YouTubeVideo extends Model
 
     /**
      * Get the YouTube embed URL.
-     *
-     * @return Attribute
      */
     protected function embedUrl(): Attribute
     {
@@ -144,8 +142,6 @@ class YouTubeVideo extends Model
 
     /**
      * Get the YouTube studio edit URL.
-     *
-     * @return Attribute
      */
     protected function studioUrl(): Attribute
     {
@@ -156,8 +152,6 @@ class YouTubeVideo extends Model
 
     /**
      * Check if video is public.
-     *
-     * @return Attribute
      */
     protected function isPublic(): Attribute
     {
@@ -168,8 +162,6 @@ class YouTubeVideo extends Model
 
     /**
      * Check if video is private.
-     *
-     * @return Attribute
      */
     protected function isPrivate(): Attribute
     {
@@ -180,8 +172,6 @@ class YouTubeVideo extends Model
 
     /**
      * Check if video is unlisted.
-     *
-     * @return Attribute
      */
     protected function isUnlisted(): Attribute
     {
@@ -192,8 +182,6 @@ class YouTubeVideo extends Model
 
     /**
      * Check if video is being processed.
-     *
-     * @return Attribute
      */
     protected function isProcessing(): Attribute
     {
@@ -204,39 +192,33 @@ class YouTubeVideo extends Model
 
     /**
      * Check if video processing failed.
-     *
-     * @return Attribute
      */
     protected function processingFailed(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->processing_status === 'failed' || !empty($this->failure_reason),
+            get: fn () => $this->processing_status === 'failed' || ! empty($this->failure_reason),
         );
     }
 
     /**
      * Check if video is live.
-     *
-     * @return Attribute
      */
     protected function isLive(): Attribute
     {
         return Attribute::make(
-            get: fn () => !empty($this->live_streaming_details),
+            get: fn () => ! empty($this->live_streaming_details),
         );
     }
 
     /**
      * Get formatted duration.
-     *
-     * @return Attribute
      */
     protected function formattedDuration(): Attribute
     {
         return Attribute::make(
             get: function () {
-                if (!$this->duration) {
-                    return null;
+                if (! $this->duration) {
+                    return;
                 }
 
                 // Parse ISO 8601 duration (e.g., PT4M13S)
@@ -264,8 +246,6 @@ class YouTubeVideo extends Model
 
     /**
      * Get the best available thumbnail.
-     *
-     * @return Attribute
      */
     protected function thumbnail(): Attribute
     {
@@ -280,8 +260,6 @@ class YouTubeVideo extends Model
 
     /**
      * Get formatted view count.
-     *
-     * @return Attribute
      */
     protected function formattedViewCount(): Attribute
     {
@@ -293,6 +271,7 @@ class YouTubeVideo extends Model
                 } elseif ($count >= 1000) {
                     return round($count / 1000, 1) . 'K';
                 }
+
                 return (string) $count;
             },
         );
@@ -301,7 +280,7 @@ class YouTubeVideo extends Model
     /**
      * Scope a query to only include public videos.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopePublic($query)
@@ -312,7 +291,7 @@ class YouTubeVideo extends Model
     /**
      * Scope a query to only include private videos.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopePrivate($query)
@@ -323,7 +302,7 @@ class YouTubeVideo extends Model
     /**
      * Scope a query to only include unlisted videos.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeUnlisted($query)
@@ -334,8 +313,7 @@ class YouTubeVideo extends Model
     /**
      * Scope a query to only include videos from a specific channel.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $channelId
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeFromChannel($query, string $channelId)
@@ -346,7 +324,7 @@ class YouTubeVideo extends Model
     /**
      * Scope a query to only include processed videos.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeProcessed($query)
@@ -357,7 +335,7 @@ class YouTubeVideo extends Model
     /**
      * Scope a query to only include videos being processed.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeProcessing($query)
@@ -368,23 +346,19 @@ class YouTubeVideo extends Model
     /**
      * Scope a query to search videos by title or description.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $search
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearch($query, string $search)
     {
         return $query->where(function ($q) use ($search) {
             $q->where('title', 'like', "%{$search}%")
-              ->orWhere('description', 'like', "%{$search}%");
+                ->orWhere('description', 'like', "%{$search}%");
         });
     }
 
     /**
      * Update video statistics from YouTube API.
-     *
-     * @param array $statistics
-     * @return void
      */
     public function updateStatistics(array $statistics): void
     {
@@ -400,10 +374,6 @@ class YouTubeVideo extends Model
 
     /**
      * Update video processing status.
-     *
-     * @param string $status
-     * @param array|null $details
-     * @return void
      */
     public function updateProcessingStatus(string $status, ?array $details = null): void
     {

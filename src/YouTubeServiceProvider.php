@@ -2,14 +2,13 @@
 
 namespace EkstreMedia\LaravelYouTube;
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\ServiceProvider;
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
-use EkstreMedia\LaravelYouTube\Services\TokenManager;
-use EkstreMedia\LaravelYouTube\Services\AuthService;
-use EkstreMedia\LaravelYouTube\Console\Commands\RefreshTokensCommand;
 use EkstreMedia\LaravelYouTube\Console\Commands\ClearExpiredTokensCommand;
+use EkstreMedia\LaravelYouTube\Console\Commands\RefreshTokensCommand;
+use EkstreMedia\LaravelYouTube\Services\AuthService;
+use EkstreMedia\LaravelYouTube\Services\TokenManager;
+use EkstreMedia\LaravelYouTube\Services\YouTubeService;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\ServiceProvider;
 
 class YouTubeServiceProvider extends ServiceProvider
 {
@@ -114,12 +113,12 @@ class YouTubeServiceProvider extends ServiceProvider
             });
         }
 
-        // Register view components
-        $this->loadViewComponentsAs('youtube', [
-            'upload-form' => \EkstreMedia\LaravelYouTube\View\Components\UploadForm::class,
-            'video-list' => \EkstreMedia\LaravelYouTube\View\Components\VideoList::class,
-            'channel-info' => \EkstreMedia\LaravelYouTube\View\Components\ChannelInfo::class,
-            'auth-button' => \EkstreMedia\LaravelYouTube\View\Components\AuthButton::class,
-        ]);
+        // Register view components (TODO: Implement these components)
+        // $this->loadViewComponentsAs('youtube', [
+        //     'upload-form' => \EkstreMedia\LaravelYouTube\View\Components\UploadForm::class,
+        //     'video-list' => \EkstreMedia\LaravelYouTube\View\Components\VideoList::class,
+        //     'channel-info' => \EkstreMedia\LaravelYouTube\View\Components\ChannelInfo::class,
+        //     'auth-button' => \EkstreMedia\LaravelYouTube\View\Components\AuthButton::class,
+        // ]);
     }
 }

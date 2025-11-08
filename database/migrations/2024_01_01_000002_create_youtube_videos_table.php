@@ -64,14 +64,14 @@ return new class extends Migration
 
             // Foreign keys
             $table->foreign('user_id')
-                  ->references('id')
-                  ->on('users')
-                  ->onDelete('cascade');
+                ->references('id')
+                ->on('users')
+                ->onDelete('cascade');
 
             $table->foreign('token_id')
-                  ->references('id')
-                  ->on('youtube_tokens')
-                  ->onDelete('cascade');
+                ->references('id')
+                ->on('youtube_tokens')
+                ->onDelete('cascade');
 
             // Indexes for performance
             $table->index(['user_id', 'privacy_status', 'created_at']);

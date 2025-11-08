@@ -2,11 +2,11 @@
 
 namespace EkstreMedia\LaravelYouTube\Http\Controllers\Api;
 
+use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
+use EkstreMedia\LaravelYouTube\Services\YouTubeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
 
 class ChannelController extends Controller
 {

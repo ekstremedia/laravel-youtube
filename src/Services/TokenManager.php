@@ -3,11 +3,10 @@
 namespace EkstreMedia\LaravelYouTube\Services;
 
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
+use EkstreMedia\LaravelYouTube\Exceptions\TokenException;
+use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
-use EkstreMedia\LaravelYouTube\Exceptions\TokenException;
 
 class TokenManager
 {
@@ -29,9 +28,9 @@ class TokenManager
     /**
      * Create a new TokenManager instance
      *
-     * @param array $config Storage configuration
-     * @param mixed $cache Cache repository
-     * @param mixed $db Database connection
+     * @param  array  $config  Storage configuration
+     * @param  mixed  $cache  Cache repository
+     * @param  mixed  $db  Database connection
      */
     public function __construct(array $config, $cache, $db)
     {
@@ -43,10 +42,10 @@ class TokenManager
     /**
      * Store OAuth tokens in the database
      *
-     * @param array $tokenData Token data from OAuth
-     * @param array $channelInfo Channel information
-     * @param int|null $userId User ID
-     * @return YouTubeToken
+     * @param  array  $tokenData  Token data from OAuth
+     * @param  array  $channelInfo  Channel information
+     * @param  int|null  $userId  User ID
+     *
      * @throws TokenException
      */
     public function storeToken(array $tokenData, array $channelInfo, ?int $userId = null): YouTubeToken
@@ -54,10 +53,10 @@ class TokenManager
         try {
             // Check if token already exists for this channel
             $existingToken = YouTubeToken::where('channel_id', $channelInfo['id'])
-                ->when($userId, fn($q) => $q->where('user_id', $userId))
+                ->when($userId, fn ($q) => $q->where('user_id', $userId))
                 ->first();
 
-            $tokenModel = $existingToken ?: new YouTubeToken();
+            $tokenModel = $existingToken ?: new YouTubeToken;
 
             // Set token data
             $tokenModel->user_id = $userId;
@@ -71,7 +70,7 @@ class TokenManager
 
             if (isset($tokenData['refresh_token'])) {
                 $tokenModel->refresh_token = Crypt::encryptString($tokenData['refresh_token']);
-            } elseif (!$existingToken) {
+            } elseif (! $existingToken) {
                 throw new TokenException('No refresh token provided for new token');
             }
 
@@ -109,14 +108,14 @@ class TokenManager
             logger()->info('YouTube token stored successfully', [
                 'user_id' => $userId,
                 'channel_id' => $channelInfo['id'],
-                'expires_at' => $expiresAt->toDateTimeString()
+                'expires_at' => $expiresAt->toDateTimeString(),
             ]);
 
             return $tokenModel;
         } catch (\Exception $e) {
             logger()->error('Failed to store YouTube token', [
                 'error' => $e->getMessage(),
-                'user_id' => $userId
+                'user_id' => $userId,
             ]);
             throw new TokenException('Failed to store token: ' . $e->getMessage(), 0, $e);
         }
@@ -125,9 +124,8 @@ class TokenManager
     /**
      * Get active token for a user
      *
-     * @param int $userId User ID
-     * @param string|null $channelId Optional channel ID
-     * @return YouTubeToken|null
+     * @param  int  $userId  User ID
+     * @param  string|null  $channelId  Optional channel ID
      */
     public function getActiveToken(int $userId, ?string $channelId = null): ?YouTubeToken
     {
@@ -148,8 +146,7 @@ class TokenManager
     /**
      * Get all active tokens for a user
      *
-     * @param int $userId User ID
-     * @return \Illuminate\Support\Collection
+     * @param  int  $userId  User ID
      */
     public function getUserTokens(int $userId): \Illuminate\Support\Collection
     {
@@ -162,8 +159,8 @@ class TokenManager
     /**
      * Get decrypted access token
      *
-     * @param YouTubeToken $token Token model
-     * @return string
+     * @param  YouTubeToken  $token  Token model
+     *
      * @throws TokenException
      */
     public function getAccessToken(YouTubeToken $token): string
@@ -178,8 +175,8 @@ class TokenManager
     /**
      * Get decrypted refresh token
      *
-     * @param YouTubeToken $token Token model
-     * @return string
+     * @param  YouTubeToken  $token  Token model
+     *
      * @throws TokenException
      */
     public function getRefreshToken(YouTubeToken $token): string
@@ -194,8 +191,7 @@ class TokenManager
     /**
      * Check if token needs refresh
      *
-     * @param YouTubeToken $token Token model
-     * @return bool
+     * @param  YouTubeToken  $token  Token model
      */
     public function needsRefresh(YouTubeToken $token): bool
     {
@@ -206,9 +202,9 @@ class TokenManager
     /**
      * Update token after refresh
      *
-     * @param YouTubeToken $token Token model
-     * @param array $newTokenData New token data
-     * @return YouTubeToken
+     * @param  YouTubeToken  $token  Token model
+     * @param  array  $newTokenData  New token data
+     *
      * @throws TokenException
      */
     public function updateToken(YouTubeToken $token, array $newTokenData): YouTubeToken
@@ -241,14 +237,14 @@ class TokenManager
                 'token_id' => $token->id,
                 'user_id' => $token->user_id,
                 'channel_id' => $token->channel_id,
-                'refresh_count' => $token->refresh_count
+                'refresh_count' => $token->refresh_count,
             ]);
 
             return $token;
         } catch (\Exception $e) {
             logger()->error('Failed to update YouTube token', [
                 'token_id' => $token->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
             throw new TokenException('Failed to update token: ' . $e->getMessage(), 0, $e);
         }
@@ -257,9 +253,8 @@ class TokenManager
     /**
      * Mark token as failed
      *
-     * @param YouTubeToken $token Token model
-     * @param string $error Error message
-     * @return void
+     * @param  YouTubeToken  $token  Token model
+     * @param  string  $error  Error message
      */
     public function markTokenFailed(YouTubeToken $token, string $error): void
     {
@@ -272,15 +267,14 @@ class TokenManager
 
         logger()->warning('YouTube token marked as failed', [
             'token_id' => $token->id,
-            'error' => $error
+            'error' => $error,
         ]);
     }
 
     /**
      * Deactivate token
      *
-     * @param YouTubeToken $token Token model
-     * @return void
+     * @param  YouTubeToken  $token  Token model
      */
     public function deactivateToken(YouTubeToken $token): void
     {
@@ -292,14 +286,14 @@ class TokenManager
         logger()->info('YouTube token deactivated', [
             'token_id' => $token->id,
             'user_id' => $token->user_id,
-            'channel_id' => $token->channel_id
+            'channel_id' => $token->channel_id,
         ]);
     }
 
     /**
      * Delete expired tokens
      *
-     * @param int $daysOld Delete tokens older than this many days
+     * @param  int  $daysOld  Delete tokens older than this many days
      * @return int Number of deleted tokens
      */
     public function deleteExpiredTokens(int $daysOld = 30): int
@@ -313,7 +307,7 @@ class TokenManager
         if ($count > 0) {
             logger()->info('Deleted expired YouTube tokens', [
                 'count' => $count,
-                'cutoff_date' => $cutoffDate->toDateTimeString()
+                'cutoff_date' => $cutoffDate->toDateTimeString(),
             ]);
         }
 
@@ -338,13 +332,13 @@ class TokenManager
                 // We just mark them for refresh here
                 logger()->info('Token needs refresh', [
                     'token_id' => $token->id,
-                    'expires_at' => $token->expires_at->toDateTimeString()
+                    'expires_at' => $token->expires_at->toDateTimeString(),
                 ]);
                 $count++;
             } catch (\Exception $e) {
                 logger()->error('Failed to mark token for refresh', [
                     'token_id' => $token->id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
@@ -355,9 +349,8 @@ class TokenManager
     /**
      * Get cache key for token
      *
-     * @param int $userId User ID
-     * @param string|null $channelId Channel ID
-     * @return string
+     * @param  int  $userId  User ID
+     * @param  string|null  $channelId  Channel ID
      */
     protected function getCacheKey(int $userId, ?string $channelId = null): string
     {
@@ -365,15 +358,15 @@ class TokenManager
         if ($channelId) {
             $key .= ':' . $channelId;
         }
+
         return $key;
     }
 
     /**
      * Clear token cache
      *
-     * @param int|null $userId User ID
-     * @param string|null $channelId Channel ID
-     * @return void
+     * @param  int|null  $userId  User ID
+     * @param  string|null  $channelId  Channel ID
      */
     protected function clearTokenCache(?int $userId = null, ?string $channelId = null): void
     {

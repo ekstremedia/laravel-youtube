@@ -2,11 +2,11 @@
 
 namespace EkstreMedia\LaravelYouTube\Services;
 
-use Google_Client;
-use Google_Service_YouTube;
-use Google_Service_Oauth2;
-use Illuminate\Support\Facades\Session;
 use EkstreMedia\LaravelYouTube\Exceptions\YouTubeAuthException;
+use Google_Client;
+use Google_Service_Oauth2;
+use Google_Service_YouTube;
+use Illuminate\Support\Facades\Session;
 
 class AuthService
 {
@@ -28,8 +28,8 @@ class AuthService
     /**
      * Create a new AuthService instance
      *
-     * @param array $credentials OAuth2 credentials
-     * @param array $scopes API scopes
+     * @param  array  $credentials  OAuth2 credentials
+     * @param  array  $scopes  API scopes
      */
     public function __construct(array $credentials, array $scopes)
     {
@@ -40,12 +40,10 @@ class AuthService
 
     /**
      * Initialize the Google Client
-     *
-     * @return void
      */
     protected function initializeClient(): void
     {
-        $this->client = new Google_Client();
+        $this->client = new Google_Client;
 
         // Set OAuth2 credentials
         $this->client->setClientId($this->credentials['client_id']);
@@ -67,8 +65,6 @@ class AuthService
 
     /**
      * Build the redirect URI
-     *
-     * @return string
      */
     protected function buildRedirectUri(): string
     {
@@ -86,8 +82,7 @@ class AuthService
     /**
      * Get the authorization URL
      *
-     * @param string|null $state Optional state parameter
-     * @return string
+     * @param  string|null  $state  Optional state parameter
      */
     public function getAuthUrl(?string $state = null): string
     {
@@ -106,9 +101,10 @@ class AuthService
     /**
      * Exchange authorization code for access token
      *
-     * @param string $code Authorization code
-     * @param string|null $state State parameter for CSRF protection
+     * @param  string  $code  Authorization code
+     * @param  string|null  $state  State parameter for CSRF protection
      * @return array Token data
+     *
      * @throws YouTubeAuthException
      */
     public function exchangeCode(string $code, ?string $state = null): array
@@ -133,11 +129,11 @@ class AuthService
             }
 
             // Ensure we have required token fields
-            if (!isset($token['access_token'])) {
+            if (! isset($token['access_token'])) {
                 throw new YouTubeAuthException('No access token received');
             }
 
-            if (!isset($token['refresh_token'])) {
+            if (! isset($token['refresh_token'])) {
                 // Log warning but don't fail - refresh token might not be provided on subsequent auths
                 logger()->warning('No refresh token received from YouTube OAuth');
             }
@@ -151,8 +147,9 @@ class AuthService
     /**
      * Refresh an access token using refresh token
      *
-     * @param string $refreshToken Refresh token
+     * @param  string  $refreshToken  Refresh token
      * @return array New token data
+     *
      * @throws YouTubeAuthException
      */
     public function refreshAccessToken(string $refreshToken): array
@@ -161,7 +158,7 @@ class AuthService
             $this->client->refreshToken($refreshToken);
             $token = $this->client->getAccessToken();
 
-            if (!$token || isset($token['error'])) {
+            if (! $token || isset($token['error'])) {
                 throw new YouTubeAuthException(
                     'Failed to refresh access token: ' . ($token['error_description'] ?? $token['error'] ?? 'Unknown error')
                 );
@@ -179,7 +176,7 @@ class AuthService
     /**
      * Revoke access token
      *
-     * @param string $token Access token or refresh token to revoke
+     * @param  string  $token  Access token or refresh token to revoke
      * @return bool Success status
      */
     public function revokeToken(string $token): bool
@@ -188,8 +185,9 @@ class AuthService
             return $this->client->revokeToken($token);
         } catch (\Exception $e) {
             logger()->error('Failed to revoke YouTube token', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -197,8 +195,7 @@ class AuthService
     /**
      * Set access token for authenticated requests
      *
-     * @param array $token Token data
-     * @return void
+     * @param  array  $token  Token data
      */
     public function setAccessToken(array $token): void
     {
@@ -207,8 +204,6 @@ class AuthService
 
     /**
      * Check if current token is expired
-     *
-     * @return bool
      */
     public function isTokenExpired(): bool
     {
@@ -218,8 +213,9 @@ class AuthService
     /**
      * Get user information from OAuth2
      *
-     * @param string $accessToken Access token
+     * @param  string  $accessToken  Access token
      * @return array User info
+     *
      * @throws YouTubeAuthException
      */
     public function getUserInfo(string $accessToken): array
@@ -246,8 +242,9 @@ class AuthService
     /**
      * Get channel information for authenticated user
      *
-     * @param string $accessToken Access token
+     * @param  string  $accessToken  Access token
      * @return array Channel info
+     *
      * @throws YouTubeAuthException
      */
     public function getChannelInfo(string $accessToken): array
@@ -257,10 +254,10 @@ class AuthService
 
             $youtube = new Google_Service_YouTube($this->client);
             $response = $youtube->channels->listChannels('snippet,contentDetails,statistics', [
-                'mine' => true
+                'mine' => true,
             ]);
 
-            if (!$response->getItems() || count($response->getItems()) === 0) {
+            if (! $response->getItems() || count($response->getItems()) === 0) {
                 throw new YouTubeAuthException('No YouTube channel found for this account');
             }
 
@@ -287,8 +284,6 @@ class AuthService
 
     /**
      * Get the Google Client instance
-     *
-     * @return Google_Client
      */
     public function getClient(): Google_Client
     {
@@ -298,12 +293,12 @@ class AuthService
     /**
      * Create a YouTube service instance
      *
-     * @param array $token Access token data
-     * @return Google_Service_YouTube
+     * @param  array  $token  Access token data
      */
     public function createYouTubeService(array $token): Google_Service_YouTube
     {
         $this->setAccessToken($token);
+
         return new Google_Service_YouTube($this->client);
     }
 }

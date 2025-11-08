@@ -2,10 +2,10 @@
 
 namespace EkstreMedia\LaravelYouTube\Database\Factories;
 
+use Carbon\Carbon;
 use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Crypt;
-use Carbon\Carbon;
 
 class YouTubeTokenFactory extends Factory
 {

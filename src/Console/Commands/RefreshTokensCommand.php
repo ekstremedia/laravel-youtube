@@ -2,10 +2,10 @@
 
 namespace EkstreMedia\LaravelYouTube\Console\Commands;
 
-use Illuminate\Console\Command;
-use EkstreMedia\LaravelYouTube\Services\TokenManager;
-use EkstreMedia\LaravelYouTube\Services\AuthService;
 use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
+use EkstreMedia\LaravelYouTube\Services\AuthService;
+use EkstreMedia\LaravelYouTube\Services\TokenManager;
+use Illuminate\Console\Command;
 
 class RefreshTokensCommand extends Command
 {
@@ -38,9 +38,6 @@ class RefreshTokensCommand extends Command
 
     /**
      * Create a new command instance.
-     *
-     * @param TokenManager $tokenManager
-     * @param AuthService $authService
      */
     public function __construct(TokenManager $tokenManager, AuthService $authService)
     {
@@ -51,8 +48,6 @@ class RefreshTokensCommand extends Command
 
     /**
      * Execute the console command.
-     *
-     * @return int
      */
     public function handle(): int
     {
@@ -66,8 +61,9 @@ class RefreshTokensCommand extends Command
             // Refresh specific token
             $token = YouTubeToken::find($tokenId);
 
-            if (!$token) {
+            if (! $token) {
                 $this->error("Token with ID {$tokenId} not found.");
+
                 return 1;
             }
 
@@ -82,6 +78,7 @@ class RefreshTokensCommand extends Command
 
             if ($tokens->isEmpty()) {
                 $this->warn("No active tokens found for user ID {$userId}.");
+
                 return 0;
             }
 
@@ -90,7 +87,7 @@ class RefreshTokensCommand extends Command
             // Refresh all expiring tokens
             $query = YouTubeToken::where('is_active', true);
 
-            if (!$force) {
+            if (! $force) {
                 $query->expiringSoon(15); // Tokens expiring in 15 minutes
             }
 
@@ -98,6 +95,7 @@ class RefreshTokensCommand extends Command
 
             if ($tokens->isEmpty()) {
                 $this->info('No tokens need refreshing.');
+
                 return 0;
             }
 
@@ -120,7 +118,7 @@ class RefreshTokensCommand extends Command
 
         $this->output->progressFinish();
 
-        $this->info("Token refresh complete!");
+        $this->info('Token refresh complete!');
         $this->info("Successfully refreshed: {$successCount}");
 
         if ($failCount > 0) {
@@ -132,17 +130,14 @@ class RefreshTokensCommand extends Command
 
     /**
      * Refresh a single token
-     *
-     * @param YouTubeToken $token
-     * @param bool $force
-     * @return bool
      */
     protected function refreshToken(YouTubeToken $token, bool $force = false): bool
     {
         try {
             // Check if refresh is needed
-            if (!$force && !$this->tokenManager->needsRefresh($token)) {
+            if (! $force && ! $this->tokenManager->needsRefresh($token)) {
                 $this->line("Token {$token->id} does not need refresh (expires at {$token->expires_at}).");
+
                 return true;
             }
 

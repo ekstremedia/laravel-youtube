@@ -1,27 +1,30 @@
 <?php
 
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
-use EkstreMedia\LaravelYouTube\Services\TokenManager;
-use EkstreMedia\LaravelYouTube\Services\AuthService;
+use EkstreMedia\LaravelYouTube\Exceptions\YouTubeException;
 use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
 use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
-use EkstreMedia\LaravelYouTube\Exceptions\YouTubeException;
-use EkstreMedia\LaravelYouTube\Exceptions\TokenException;
+use EkstreMedia\LaravelYouTube\Services\AuthService;
+use EkstreMedia\LaravelYouTube\Services\TokenManager;
+use EkstreMedia\LaravelYouTube\Services\YouTubeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 
 uses(RefreshDatabase::class);
 
 // Helper function to create a test user
-function createTestUser() {
-    $user = new class extends \Illuminate\Foundation\Auth\User {
+function createTestUser()
+{
+    $user = new class extends \Illuminate\Foundation\Auth\User
+    {
         protected $table = 'users';
+
         protected $fillable = ['name', 'email', 'password'];
     };
     $user->name = 'Test User ' . rand(1000, 9999);
     $user->email = 'test' . rand(1000, 9999) . '@example.com';
     $user->password = bcrypt('password');
     $user->save();
+
     return $user;
 }
 
@@ -45,7 +48,7 @@ describe('YouTube Service', function () {
     it('throws exception when no active token is set', function () {
         $service = app(YouTubeService::class);
 
-        expect(fn() => $service->getChannel())
+        expect(fn () => $service->getChannel())
             ->toThrow(YouTubeException::class, 'No active token set');
     });
 
@@ -60,7 +63,7 @@ describe('YouTube Service', function () {
 
         $service = app(YouTubeService::class);
 
-        expect(fn() => $service->forUser($user->id))
+        expect(fn () => $service->forUser($user->id))
             ->not->toThrow(Exception::class);
     });
 });

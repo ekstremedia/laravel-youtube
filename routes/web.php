@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use EkstreMedia\LaravelYouTube\Http\Controllers\AuthController;
+use Illuminate\Support\Facades\Route;
 
 Route::group([
     'prefix' => config('youtube.routes.prefix', 'youtube'),

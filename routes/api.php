@@ -1,10 +1,10 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use EkstreMedia\LaravelYouTube\Http\Controllers\Api\ChannelController;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Api\VideoController;
 use EkstreMedia\LaravelYouTube\Http\Controllers\Api\PlaylistController;
 use EkstreMedia\LaravelYouTube\Http\Controllers\Api\UploadController;
+use EkstreMedia\LaravelYouTube\Http\Controllers\Api\VideoController;
+use Illuminate\Support\Facades\Route;
 
 Route::group([
     'prefix' => 'api/' . config('youtube.routes.prefix', 'youtube'),

@@ -34,9 +34,9 @@ return new class extends Migration
 
             // Add foreign key if users table exists
             $table->foreign('user_id')
-                  ->references('id')
-                  ->on('users')
-                  ->onDelete('cascade');
+                ->references('id')
+                ->on('users')
+                ->onDelete('cascade');
 
             // Composite index for efficient queries
             $table->index(['user_id', 'is_active', 'expires_at']);

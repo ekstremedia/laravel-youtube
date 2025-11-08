@@ -2,12 +2,12 @@
 
 namespace EkstreMedia\LaravelYouTube\Http\Controllers\Api;
 
+use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
+use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
+use EkstreMedia\LaravelYouTube\Services\YouTubeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
-use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
 
 class VideoController extends Controller
 {
@@ -60,7 +60,7 @@ class VideoController extends Controller
             $video = $this->youtubeService
                 ->forUser(Auth::id())
                 ->updateVideo($id, $request->only([
-                    'title', 'description', 'tags', 'privacy_status', 'category_id'
+                    'title', 'description', 'tags', 'privacy_status', 'category_id',
                 ]));
 
             return response()->json([

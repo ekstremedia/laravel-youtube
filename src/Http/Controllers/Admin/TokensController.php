@@ -2,14 +2,13 @@
 
 namespace EkstreMedia\LaravelYouTube\Http\Controllers\Admin;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\View\View;
-use Illuminate\Http\RedirectResponse;
 use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
+use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
 use EkstreMedia\LaravelYouTube\Services\AuthService;
 use EkstreMedia\LaravelYouTube\Services\TokenManager;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class TokensController extends Controller
 {

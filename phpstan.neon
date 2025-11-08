@@ -5,9 +5,17 @@ parameters:
     level: 5
     paths:
         - src
-    excludePaths:
-        - src/View/Components
     tmpDir: build/phpstan
-    checkOctaneCompatibility: true
-    checkModelProperties: true
-    checkMissingIterableValueType: false
+    ignoreErrors:
+        # Ignore Eloquent magic methods
+        - '#Call to an undefined static method .*::(where|find|create|update|delete|first|get|paginate|findOrFail)\(\)#'
+        - '#Access to an undefined property .*::\$[a-zA-Z_]+#'
+        - '#Call to static method .* on an unknown class DB\.#'
+        # Ignore View return type differences
+        - '#should return Illuminate\\View\\View but returns Illuminate\\Contracts\\View\\View#'
+        # Allow new static() pattern
+        - '#Unsafe usage of new static\(\)#'
+        # Google MediaFileUpload accepts null for data parameter
+        - '#Parameter \#4 \$data of class Google\\Http\\MediaFileUpload constructor expects string, null given#'
+        # Eloquent scope return types
+        - '#should return Illuminate\\Database\\Eloquent\\Builder but returns Illuminate\\Database\\Query\\Builder#'

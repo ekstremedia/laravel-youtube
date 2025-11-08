@@ -2,10 +2,10 @@
 
 namespace EkstreMedia\LaravelYouTube\Console\Commands;
 
-use Illuminate\Console\Command;
-use EkstreMedia\LaravelYouTube\Services\TokenManager;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
 use Carbon\Carbon;
+use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
+use EkstreMedia\LaravelYouTube\Services\TokenManager;
+use Illuminate\Console\Command;
 
 class ClearExpiredTokensCommand extends Command
 {
@@ -32,8 +32,6 @@ class ClearExpiredTokensCommand extends Command
 
     /**
      * Create a new command instance.
-     *
-     * @param TokenManager $tokenManager
      */
     public function __construct(TokenManager $tokenManager)
     {
@@ -43,8 +41,6 @@ class ClearExpiredTokensCommand extends Command
 
     /**
      * Execute the console command.
-     *
-     * @return int
      */
     public function handle(): int
     {
@@ -72,6 +68,7 @@ class ClearExpiredTokensCommand extends Command
 
         if ($tokensToDelete->isEmpty()) {
             $this->info('No expired tokens found to delete.');
+
             return 0;
         }
 
@@ -96,12 +93,14 @@ class ClearExpiredTokensCommand extends Command
 
         if ($dryRun) {
             $this->info("Would delete {$tokensToDelete->count()} tokens.");
+
             return 0;
         }
 
         // Confirm deletion
-        if (!$this->confirm("Do you want to delete {$tokensToDelete->count()} expired tokens?")) {
+        if (! $this->confirm("Do you want to delete {$tokensToDelete->count()} expired tokens?")) {
             $this->info('Operation cancelled.');
+
             return 0;
         }
 
@@ -127,11 +126,12 @@ class ClearExpiredTokensCommand extends Command
         // Also delete orphaned video records
         $this->cleanupOrphanedVideos();
 
-        $this->info("Token cleanup complete!");
+        $this->info('Token cleanup complete!');
         $this->info("Successfully deleted: {$deletedCount} tokens");
 
         if ($failedCount > 0) {
             $this->warn("Failed to delete: {$failedCount} tokens");
+
             return 1;
         }
 
@@ -140,8 +140,6 @@ class ClearExpiredTokensCommand extends Command
 
     /**
      * Clean up orphaned video records
-     *
-     * @return void
      */
     protected function cleanupOrphanedVideos(): void
     {
@@ -156,6 +154,7 @@ class ClearExpiredTokensCommand extends Command
 
         if ($orphanedVideos->isEmpty()) {
             $this->info('No orphaned video records found.');
+
             return;
         }
 

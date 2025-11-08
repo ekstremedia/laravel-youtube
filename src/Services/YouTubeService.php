@@ -2,19 +2,19 @@
 
 namespace EkstreMedia\LaravelYouTube\Services;
 
+use EkstreMedia\LaravelYouTube\Exceptions\QuotaExceededException;
+use EkstreMedia\LaravelYouTube\Exceptions\TokenException;
+use EkstreMedia\LaravelYouTube\Exceptions\UploadException;
+use EkstreMedia\LaravelYouTube\Exceptions\YouTubeException;
+use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
+use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
+use Google_Http_MediaFileUpload;
 use Google_Service_YouTube;
 use Google_Service_YouTube_Video;
 use Google_Service_YouTube_VideoSnippet;
 use Google_Service_YouTube_VideoStatus;
-use Google_Http_MediaFileUpload;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
-use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
-use EkstreMedia\LaravelYouTube\Exceptions\YouTubeException;
-use EkstreMedia\LaravelYouTube\Exceptions\UploadException;
-use EkstreMedia\LaravelYouTube\Exceptions\QuotaExceededException;
-use EkstreMedia\LaravelYouTube\Exceptions\TokenException;
 
 class YouTubeService
 {
@@ -45,10 +45,6 @@ class YouTubeService
 
     /**
      * Create a new YouTube service instance
-     *
-     * @param TokenManager $tokenManager
-     * @param AuthService $authService
-     * @param array $config
      */
     public function __construct(TokenManager $tokenManager, AuthService $authService, array $config)
     {
@@ -60,41 +56,40 @@ class YouTubeService
     /**
      * Set the active token for operations
      *
-     * @param int $userId
-     * @param string|null $channelId
      * @return $this
+     *
      * @throws TokenException
      */
     public function forUser(int $userId, ?string $channelId = null): self
     {
         $token = $this->tokenManager->getActiveToken($userId, $channelId);
 
-        if (!$token) {
+        if (! $token) {
             throw new TokenException('No active YouTube token found for user');
         }
 
         $this->setActiveToken($token);
+
         return $this;
     }
 
     /**
      * Set a specific token as active
      *
-     * @param YouTubeToken $token
      * @return $this
+     *
      * @throws TokenException
      */
     public function withToken(YouTubeToken $token): self
     {
         $this->setActiveToken($token);
+
         return $this;
     }
 
     /**
      * Set the active token and initialize YouTube service
      *
-     * @param YouTubeToken $token
-     * @return void
      * @throws TokenException
      */
     protected function setActiveToken(YouTubeToken $token): void
@@ -120,8 +115,6 @@ class YouTubeService
     /**
      * Refresh an expired token
      *
-     * @param YouTubeToken $token
-     * @return void
      * @throws TokenException
      */
     protected function refreshToken(YouTubeToken $token): void
@@ -144,8 +137,8 @@ class YouTubeService
     /**
      * Get channel information
      *
-     * @param array $parts Parts to retrieve
-     * @return array
+     * @param  array  $parts  Parts to retrieve
+     *
      * @throws YouTubeException
      */
     public function getChannel(array $parts = ['snippet', 'statistics', 'contentDetails']): array
@@ -154,10 +147,10 @@ class YouTubeService
 
         try {
             $response = $this->youtube->channels->listChannels(implode(',', $parts), [
-                'mine' => true
+                'mine' => true,
             ]);
 
-            if (!$response->getItems() || count($response->getItems()) === 0) {
+            if (! $response->getItems() || count($response->getItems()) === 0) {
                 throw new YouTubeException('No channel found for authenticated user');
             }
 
@@ -172,8 +165,8 @@ class YouTubeService
     /**
      * Get videos from channel
      *
-     * @param array $options Query options
-     * @return array
+     * @param  array  $options  Query options
+     *
      * @throws YouTubeException
      */
     public function getVideos(array $options = []): array
@@ -191,10 +184,10 @@ class YouTubeService
         try {
             // First get the channel's uploads playlist
             $channelResponse = $this->youtube->channels->listChannels('contentDetails', [
-                'mine' => true
+                'mine' => true,
             ]);
 
-            if (!$channelResponse->getItems()) {
+            if (! $channelResponse->getItems()) {
                 throw new YouTubeException('No channel found');
             }
 
@@ -228,9 +221,8 @@ class YouTubeService
     /**
      * Get a single video by ID
      *
-     * @param string $videoId
-     * @param array $parts Parts to retrieve
-     * @return array
+     * @param  array  $parts  Parts to retrieve
+     *
      * @throws YouTubeException
      */
     public function getVideo(string $videoId, array $parts = ['snippet', 'statistics', 'status', 'contentDetails']): array
@@ -239,10 +231,10 @@ class YouTubeService
 
         try {
             $response = $this->youtube->videos->listVideos(implode(',', $parts), [
-                'id' => $videoId
+                'id' => $videoId,
             ]);
 
-            if (!$response->getItems() || count($response->getItems()) === 0) {
+            if (! $response->getItems() || count($response->getItems()) === 0) {
                 throw new YouTubeException("Video not found: {$videoId}");
             }
 
@@ -255,10 +247,10 @@ class YouTubeService
     /**
      * Upload a video to YouTube
      *
-     * @param UploadedFile|string $video Video file or path
-     * @param array $metadata Video metadata
-     * @param array $options Upload options
-     * @return YouTubeVideo
+     * @param  UploadedFile|string  $video  Video file or path
+     * @param  array  $metadata  Video metadata
+     * @param  array  $options  Upload options
+     *
      * @throws UploadException
      */
     public function uploadVideo($video, array $metadata, array $options = []): YouTubeVideo
@@ -270,7 +262,7 @@ class YouTubeService
             ? $video->getPathname()
             : $video;
 
-        if (!file_exists($videoPath)) {
+        if (! file_exists($videoPath)) {
             throw new UploadException("Video file not found: {$videoPath}");
         }
 
@@ -283,10 +275,10 @@ class YouTubeService
 
         try {
             // Create video resource
-            $youtubeVideo = new Google_Service_YouTube_Video();
+            $youtubeVideo = new Google_Service_YouTube_Video;
 
             // Set snippet
-            $snippet = new Google_Service_YouTube_VideoSnippet();
+            $snippet = new Google_Service_YouTube_VideoSnippet;
             $snippet->setTitle($metadata['title']);
             $snippet->setDescription($metadata['description'] ?? '');
             $snippet->setTags($metadata['tags'] ?? []);
@@ -299,7 +291,7 @@ class YouTubeService
             $youtubeVideo->setSnippet($snippet);
 
             // Set status
-            $status = new Google_Service_YouTube_VideoStatus();
+            $status = new Google_Service_YouTube_VideoStatus;
             $status->setPrivacyStatus($metadata['privacy_status'] ?? $this->config['defaults']['privacy_status'] ?? 'private');
 
             if (isset($metadata['embeddable'])) {
@@ -337,9 +329,9 @@ class YouTubeService
 
             // Upload in chunks
             $status = false;
-            $handle = fopen($videoPath, "rb");
+            $handle = fopen($videoPath, 'rb');
 
-            while (!$status && !feof($handle)) {
+            while (! $status && ! feof($handle)) {
                 $chunk = fread($handle, $chunkSize);
                 $status = $media->nextChunk($chunk);
             }
@@ -347,12 +339,12 @@ class YouTubeService
             fclose($handle);
             $client->setDefer(false);
 
-            if (!$status || !isset($status['id'])) {
+            if (! $status || ! isset($status['id'])) {
                 throw new UploadException('Upload failed - no video ID returned');
             }
 
             // Store video in database
-            $videoModel = new YouTubeVideo();
+            $videoModel = new YouTubeVideo;
             $videoModel->fill([
                 'user_id' => $this->activeToken->user_id,
                 'token_id' => $this->activeToken->id,
@@ -391,9 +383,6 @@ class YouTubeService
     /**
      * Update video metadata
      *
-     * @param string $videoId
-     * @param array $metadata
-     * @return array
      * @throws YouTubeException
      */
     public function updateVideo(string $videoId, array $metadata): array
@@ -404,7 +393,7 @@ class YouTubeService
             // Get existing video
             $response = $this->youtube->videos->listVideos('snippet,status', ['id' => $videoId]);
 
-            if (!$response->getItems()) {
+            if (! $response->getItems()) {
                 throw new YouTubeException("Video not found: {$videoId}");
             }
 
@@ -478,8 +467,6 @@ class YouTubeService
     /**
      * Delete a video
      *
-     * @param string $videoId
-     * @return bool
      * @throws YouTubeException
      */
     public function deleteVideo(string $videoId): bool
@@ -506,9 +493,8 @@ class YouTubeService
     /**
      * Set video thumbnail
      *
-     * @param string $videoId
-     * @param UploadedFile|string $thumbnail
-     * @return bool
+     * @param  UploadedFile|string  $thumbnail
+     *
      * @throws YouTubeException
      */
     public function setThumbnail(string $videoId, $thumbnail): bool
@@ -519,7 +505,7 @@ class YouTubeService
             ? $thumbnail->getPathname()
             : $thumbnail;
 
-        if (!file_exists($thumbnailPath)) {
+        if (! file_exists($thumbnailPath)) {
             throw new YouTubeException("Thumbnail file not found: {$thumbnailPath}");
         }
 
@@ -541,9 +527,9 @@ class YouTubeService
             $media->setFileSize(filesize($thumbnailPath));
 
             $status = false;
-            $handle = fopen($thumbnailPath, "rb");
+            $handle = fopen($thumbnailPath, 'rb');
 
-            while (!$status && !feof($handle)) {
+            while (! $status && ! feof($handle)) {
                 $chunk = fread($handle, 1 * 1024 * 1024);
                 $status = $media->nextChunk($chunk);
             }
@@ -562,8 +548,6 @@ class YouTubeService
     /**
      * Get playlists
      *
-     * @param array $options
-     * @return array
      * @throws YouTubeException
      */
     public function getPlaylists(array $options = []): array
@@ -599,8 +583,6 @@ class YouTubeService
     /**
      * Create a playlist
      *
-     * @param array $data
-     * @return array
      * @throws YouTubeException
      */
     public function createPlaylist(array $data): array
@@ -608,9 +590,9 @@ class YouTubeService
         $this->ensureAuthenticated();
 
         try {
-            $playlist = new \Google_Service_YouTube_Playlist();
+            $playlist = new \Google_Service_YouTube_Playlist;
 
-            $snippet = new \Google_Service_YouTube_PlaylistSnippet();
+            $snippet = new \Google_Service_YouTube_PlaylistSnippet;
             $snippet->setTitle($data['title']);
             $snippet->setDescription($data['description'] ?? '');
 
@@ -621,7 +603,7 @@ class YouTubeService
             $playlist->setSnippet($snippet);
 
             if (isset($data['privacy_status'])) {
-                $status = new \Google_Service_YouTube_PlaylistStatus();
+                $status = new \Google_Service_YouTube_PlaylistStatus;
                 $status->setPrivacyStatus($data['privacy_status']);
                 $playlist->setStatus($status);
             }
@@ -642,10 +624,6 @@ class YouTubeService
     /**
      * Add video to playlist
      *
-     * @param string $playlistId
-     * @param string $videoId
-     * @param int|null $position
-     * @return bool
      * @throws YouTubeException
      */
     public function addToPlaylist(string $playlistId, string $videoId, ?int $position = null): bool
@@ -653,12 +631,12 @@ class YouTubeService
         $this->ensureAuthenticated();
 
         try {
-            $playlistItem = new \Google_Service_YouTube_PlaylistItem();
+            $playlistItem = new \Google_Service_YouTube_PlaylistItem;
 
-            $snippet = new \Google_Service_YouTube_PlaylistItemSnippet();
+            $snippet = new \Google_Service_YouTube_PlaylistItemSnippet;
             $snippet->setPlaylistId($playlistId);
 
-            $resourceId = new \Google_Service_YouTube_ResourceId();
+            $resourceId = new \Google_Service_YouTube_ResourceId;
             $resourceId->setKind('youtube#video');
             $resourceId->setVideoId($videoId);
             $snippet->setResourceId($resourceId);
@@ -689,26 +667,23 @@ class YouTubeService
      */
     protected function ensureAuthenticated(): void
     {
-        if (!$this->activeToken) {
+        if (! $this->activeToken) {
             throw new YouTubeException('No active token set. Use forUser() or withToken() first.');
         }
 
-        if (!$this->youtube) {
+        if (! $this->youtube) {
             throw new YouTubeException('YouTube service not initialized');
         }
     }
 
     /**
      * Handle Google service exceptions
-     *
-     * @param \Google_Service_Exception $e
-     * @return YouTubeException
      */
     protected function handleGoogleException(\Google_Service_Exception $e): YouTubeException
     {
         $errors = $e->getErrors();
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             $error = $errors[0];
             $reason = $error['reason'] ?? '';
 
@@ -727,8 +702,7 @@ class YouTubeService
     /**
      * Format channel data
      *
-     * @param mixed $channel
-     * @return array
+     * @param  mixed  $channel
      */
     protected function formatChannelData($channel): array
     {
@@ -758,8 +732,7 @@ class YouTubeService
     /**
      * Format video data
      *
-     * @param mixed $video
-     * @return array
+     * @param  mixed  $video
      */
     protected function formatVideoData($video): array
     {
@@ -826,8 +799,7 @@ class YouTubeService
     /**
      * Format playlist data
      *
-     * @param mixed $playlist
-     * @return array
+     * @param  mixed  $playlist
      */
     protected function formatPlaylistData($playlist): array
     {

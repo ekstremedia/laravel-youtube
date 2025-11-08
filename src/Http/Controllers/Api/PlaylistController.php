@@ -2,11 +2,11 @@
 
 namespace EkstreMedia\LaravelYouTube\Http\Controllers\Api;
 
+use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
+use EkstreMedia\LaravelYouTube\Services\YouTubeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
 
 class PlaylistController extends Controller
 {
@@ -62,7 +62,7 @@ class PlaylistController extends Controller
             $playlist = $this->youtubeService
                 ->forUser(Auth::id())
                 ->createPlaylist($request->only([
-                    'title', 'description', 'privacy_status', 'tags'
+                    'title', 'description', 'privacy_status', 'tags',
                 ]));
 
             return response()->json([
@@ -93,7 +93,7 @@ class PlaylistController extends Controller
             $playlist = collect($playlists['playlists'] ?? [])
                 ->firstWhere('id', $id);
 
-            if (!$playlist) {
+            if (! $playlist) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Playlist not found',

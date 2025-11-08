@@ -2,13 +2,13 @@
 
 namespace EkstreMedia\LaravelYouTube\Http\Controllers\Admin;
 
+use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
+use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
+use EkstreMedia\LaravelYouTube\Services\YouTubeService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
-use Illuminate\Http\RedirectResponse;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
 
 class PlaylistsController extends Controller
 {
@@ -96,13 +96,13 @@ class PlaylistsController extends Controller
                     ->first();
             }
 
-            if (!$token) {
+            if (! $token) {
                 $token = YouTubeToken::where('user_id', Auth::id())
                     ->where('is_active', true)
                     ->first();
             }
 
-            if (!$token) {
+            if (! $token) {
                 return redirect()
                     ->back()
                     ->withInput()
@@ -175,7 +175,7 @@ class PlaylistsController extends Controller
             }
         }
 
-        if (!$playlist) {
+        if (! $playlist) {
             abort(404, 'Playlist not found');
         }
 
@@ -218,7 +218,7 @@ class PlaylistsController extends Controller
             }
         }
 
-        if (!$playlist) {
+        if (! $playlist) {
             abort(404, 'Playlist not found');
         }
 

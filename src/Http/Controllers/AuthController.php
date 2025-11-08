@@ -2,15 +2,15 @@
 
 namespace EkstreMedia\LaravelYouTube\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Log;
+use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
 use EkstreMedia\LaravelYouTube\Services\AuthService;
 use EkstreMedia\LaravelYouTube\Services\TokenManager;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 
 class AuthController extends Controller
 {
@@ -26,9 +26,6 @@ class AuthController extends Controller
 
     /**
      * Create a new controller instance
-     *
-     * @param AuthService $authService
-     * @param TokenManager $tokenManager
      */
     public function __construct(AuthService $authService, TokenManager $tokenManager)
     {
@@ -38,9 +35,6 @@ class AuthController extends Controller
 
     /**
      * Redirect user to YouTube OAuth authorization
-     *
-     * @param Request $request
-     * @return RedirectResponse
      */
     public function redirect(Request $request): RedirectResponse
     {
@@ -67,9 +61,6 @@ class AuthController extends Controller
 
     /**
      * Handle OAuth callback from YouTube
-     *
-     * @param Request $request
-     * @return RedirectResponse
      */
     public function callback(Request $request): RedirectResponse
     {
@@ -85,7 +76,7 @@ class AuthController extends Controller
         }
 
         // Verify we have authorization code
-        if (!$request->has('code')) {
+        if (! $request->has('code')) {
             return redirect()->route('youtube.admin.dashboard')
                 ->with('error', 'No authorization code received');
         }
@@ -130,7 +121,6 @@ class AuthController extends Controller
     /**
      * Revoke YouTube access
      *
-     * @param Request $request
      * @return RedirectResponse|JsonResponse
      */
     public function revoke(Request $request)
@@ -183,9 +173,6 @@ class AuthController extends Controller
 
     /**
      * Check authentication status
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function status(Request $request): JsonResponse
     {
@@ -195,7 +182,7 @@ class AuthController extends Controller
         try {
             $token = $this->tokenManager->getActiveToken($userId, $channelId);
 
-            if (!$token) {
+            if (! $token) {
                 return response()->json([
                     'authenticated' => false,
                     'message' => 'No active YouTube connection found',

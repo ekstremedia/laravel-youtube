@@ -1,12 +1,12 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\DashboardController;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\VideosController;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\UploadController;
 use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\ChannelsController;
+use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\DashboardController;
 use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\PlaylistsController;
 use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\TokensController;
+use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\UploadController;
+use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\VideosController;
+use Illuminate\Support\Facades\Route;
 
 Route::group([
     'prefix' => config('youtube.admin.prefix', 'youtube-admin'),

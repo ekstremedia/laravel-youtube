@@ -184,7 +184,6 @@ class YouTubeToken extends Model
      * Scope a query to only include tokens with errors.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithError($query): \Illuminate\Database\Eloquent\Builder
     {

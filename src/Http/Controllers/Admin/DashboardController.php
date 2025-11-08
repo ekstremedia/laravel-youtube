@@ -122,12 +122,19 @@ class DashboardController extends Controller
             $chartData[$date] = $uploadActivity[$date] ?? 0;
         }
 
+        // Check if OAuth credentials are configured
+        $clientId = config('youtube.credentials.client_id');
+        $clientSecret = config('youtube.credentials.client_secret');
+        $isConfigured = ! empty($clientId) && ! empty($clientSecret);
+
         return view('youtube::admin.dashboard', [
             'channels' => $channels,
             'stats' => $stats,
             'recentVideos' => $recentVideos,
             'chartData' => $chartData,
             'tokens' => $tokens,
+            'isConfigured' => $isConfigured,
+            'configurationWarning' => ! $isConfigured ? 'YouTube OAuth credentials are not configured. Please set YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET in your .env file.' : null,
         ]);
     }
 }

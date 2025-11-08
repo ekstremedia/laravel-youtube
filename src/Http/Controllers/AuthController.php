@@ -38,6 +38,21 @@ class AuthController extends Controller
      */
     public function redirect(Request $request): RedirectResponse
     {
+        // Validate OAuth credentials are configured
+        $clientId = config('youtube.credentials.client_id');
+        $clientSecret = config('youtube.credentials.client_secret');
+
+        if (empty($clientId) || empty($clientSecret)) {
+            Log::error('YouTube OAuth credentials not configured', [
+                'user_id' => Auth::id(),
+            ]);
+
+            return redirect()->back()->with(
+                'error',
+                'YouTube integration is not configured. Please contact the administrator to set up YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET in the environment configuration.'
+            );
+        }
+
         // Store return URL in session for after authentication
         if ($request->has('return_url')) {
             Session::put('youtube_return_url', $request->input('return_url'));

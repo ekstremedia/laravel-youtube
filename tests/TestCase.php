@@ -1,0 +1,83 @@
+<?php
+
+namespace Tests;
+
+use Orchestra\Testbench\TestCase as Orchestra;
+use EkstreMedia\LaravelYouTube\YouTubeServiceProvider;
+
+abstract class TestCase extends Orchestra
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Load Laravel migrations (includes users table)
+        $this->loadLaravelMigrations();
+
+        // Load package migrations
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+
+        // Run migrations
+        $this->artisan('migrate')->run();
+    }
+
+    /**
+     * Get package providers.
+     *
+     * @param  \Illuminate\Foundation\Application  $app
+     * @return array
+     */
+    protected function getPackageProviders($app)
+    {
+        return [
+            YouTubeServiceProvider::class,
+        ];
+    }
+
+    /**
+     * Define environment setup.
+     *
+     * @param  \Illuminate\Foundation\Application  $app
+     * @return void
+     */
+    protected function defineEnvironment($app)
+    {
+        // Setup default database to use sqlite :memory:
+        $app['config']->set('database.default', 'testbench');
+        $app['config']->set('database.connections.testbench', [
+            'driver'   => 'sqlite',
+            'database' => ':memory:',
+            'prefix'   => '',
+        ]);
+
+        // Set encryption key for testing
+        $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
+        $app['config']->set('app.cipher', 'AES-256-CBC');
+
+        // Setup YouTube config
+        $app['config']->set('youtube.credentials.client_id', 'test-client-id');
+        $app['config']->set('youtube.credentials.client_secret', 'test-client-secret');
+        $app['config']->set('youtube.credentials.redirect_uri', '/youtube/callback');
+        $app['config']->set('youtube.scopes', [
+            'https://www.googleapis.com/auth/youtube',
+            'https://www.googleapis.com/auth/youtube.upload',
+        ]);
+    }
+
+    /**
+     * Define database migrations.
+     *
+     * @return void
+     */
+    protected function defineDatabaseMigrations()
+    {
+        // Load Laravel's default migrations (includes users table)
+        $this->loadLaravelMigrations();
+
+        // Load package migrations
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+
+        // Run migrations
+        $this->artisan('migrate', ['--database' => 'testbench'])->run();
+    }
+}

@@ -1,0 +1,854 @@
+<?php
+
+namespace EkstreMedia\LaravelYouTube\Services;
+
+use Google_Service_YouTube;
+use Google_Service_YouTube_Video;
+use Google_Service_YouTube_VideoSnippet;
+use Google_Service_YouTube_VideoStatus;
+use Google_Http_MediaFileUpload;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
+use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
+use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
+use EkstreMedia\LaravelYouTube\Exceptions\YouTubeException;
+use EkstreMedia\LaravelYouTube\Exceptions\UploadException;
+use EkstreMedia\LaravelYouTube\Exceptions\QuotaExceededException;
+use EkstreMedia\LaravelYouTube\Exceptions\TokenException;
+
+class YouTubeService
+{
+    /**
+     * Token manager instance
+     */
+    protected TokenManager $tokenManager;
+
+    /**
+     * Auth service instance
+     */
+    protected AuthService $authService;
+
+    /**
+     * Configuration array
+     */
+    protected array $config;
+
+    /**
+     * Current YouTube service instance
+     */
+    protected ?Google_Service_YouTube $youtube = null;
+
+    /**
+     * Current active token
+     */
+    protected ?YouTubeToken $activeToken = null;
+
+    /**
+     * Create a new YouTube service instance
+     *
+     * @param TokenManager $tokenManager
+     * @param AuthService $authService
+     * @param array $config
+     */
+    public function __construct(TokenManager $tokenManager, AuthService $authService, array $config)
+    {
+        $this->tokenManager = $tokenManager;
+        $this->authService = $authService;
+        $this->config = $config;
+    }
+
+    /**
+     * Set the active token for operations
+     *
+     * @param int $userId
+     * @param string|null $channelId
+     * @return $this
+     * @throws TokenException
+     */
+    public function forUser(int $userId, ?string $channelId = null): self
+    {
+        $token = $this->tokenManager->getActiveToken($userId, $channelId);
+
+        if (!$token) {
+            throw new TokenException('No active YouTube token found for user');
+        }
+
+        $this->setActiveToken($token);
+        return $this;
+    }
+
+    /**
+     * Set a specific token as active
+     *
+     * @param YouTubeToken $token
+     * @return $this
+     * @throws TokenException
+     */
+    public function withToken(YouTubeToken $token): self
+    {
+        $this->setActiveToken($token);
+        return $this;
+    }
+
+    /**
+     * Set the active token and initialize YouTube service
+     *
+     * @param YouTubeToken $token
+     * @return void
+     * @throws TokenException
+     */
+    protected function setActiveToken(YouTubeToken $token): void
+    {
+        // Check if token needs refresh
+        if ($this->tokenManager->needsRefresh($token)) {
+            $this->refreshToken($token);
+        }
+
+        $this->activeToken = $token;
+
+        // Get decrypted access token
+        $accessToken = $this->tokenManager->getAccessToken($token);
+
+        // Create YouTube service with the token
+        $this->youtube = $this->authService->createYouTubeService([
+            'access_token' => $accessToken,
+            'token_type' => $token->token_type,
+            'expires_in' => $token->expires_in,
+        ]);
+    }
+
+    /**
+     * Refresh an expired token
+     *
+     * @param YouTubeToken $token
+     * @return void
+     * @throws TokenException
+     */
+    protected function refreshToken(YouTubeToken $token): void
+    {
+        try {
+            $refreshToken = $this->tokenManager->getRefreshToken($token);
+            $newTokenData = $this->authService->refreshAccessToken($refreshToken);
+            $this->tokenManager->updateToken($token, $newTokenData);
+
+            Log::info('YouTube token refreshed', [
+                'token_id' => $token->id,
+                'channel_id' => $token->channel_id,
+            ]);
+        } catch (\Exception $e) {
+            $this->tokenManager->markTokenFailed($token, $e->getMessage());
+            throw new TokenException('Failed to refresh token: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Get channel information
+     *
+     * @param array $parts Parts to retrieve
+     * @return array
+     * @throws YouTubeException
+     */
+    public function getChannel(array $parts = ['snippet', 'statistics', 'contentDetails']): array
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $response = $this->youtube->channels->listChannels(implode(',', $parts), [
+                'mine' => true
+            ]);
+
+            if (!$response->getItems() || count($response->getItems()) === 0) {
+                throw new YouTubeException('No channel found for authenticated user');
+            }
+
+            $channel = $response->getItems()[0];
+
+            return $this->formatChannelData($channel);
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Get videos from channel
+     *
+     * @param array $options Query options
+     * @return array
+     * @throws YouTubeException
+     */
+    public function getVideos(array $options = []): array
+    {
+        $this->ensureAuthenticated();
+
+        $defaults = [
+            'maxResults' => 50,
+            'order' => 'date',
+            'type' => 'video',
+        ];
+
+        $params = array_merge($defaults, $options);
+
+        try {
+            // First get the channel's uploads playlist
+            $channelResponse = $this->youtube->channels->listChannels('contentDetails', [
+                'mine' => true
+            ]);
+
+            if (!$channelResponse->getItems()) {
+                throw new YouTubeException('No channel found');
+            }
+
+            $uploadsPlaylistId = $channelResponse->getItems()[0]
+                ->getContentDetails()
+                ->getRelatedPlaylists()
+                ->getUploads();
+
+            // Get videos from uploads playlist
+            $response = $this->youtube->playlistItems->listPlaylistItems(
+                'snippet,contentDetails,status',
+                array_merge($params, ['playlistId' => $uploadsPlaylistId])
+            );
+
+            $videos = [];
+            foreach ($response->getItems() as $item) {
+                $videos[] = $this->formatVideoData($item);
+            }
+
+            return [
+                'videos' => $videos,
+                'nextPageToken' => $response->getNextPageToken(),
+                'prevPageToken' => $response->getPrevPageToken(),
+                'totalResults' => $response->getPageInfo()->getTotalResults(),
+            ];
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Get a single video by ID
+     *
+     * @param string $videoId
+     * @param array $parts Parts to retrieve
+     * @return array
+     * @throws YouTubeException
+     */
+    public function getVideo(string $videoId, array $parts = ['snippet', 'statistics', 'status', 'contentDetails']): array
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $response = $this->youtube->videos->listVideos(implode(',', $parts), [
+                'id' => $videoId
+            ]);
+
+            if (!$response->getItems() || count($response->getItems()) === 0) {
+                throw new YouTubeException("Video not found: {$videoId}");
+            }
+
+            return $this->formatVideoData($response->getItems()[0]);
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Upload a video to YouTube
+     *
+     * @param UploadedFile|string $video Video file or path
+     * @param array $metadata Video metadata
+     * @param array $options Upload options
+     * @return YouTubeVideo
+     * @throws UploadException
+     */
+    public function uploadVideo($video, array $metadata, array $options = []): YouTubeVideo
+    {
+        $this->ensureAuthenticated();
+
+        // Prepare video path
+        $videoPath = $video instanceof UploadedFile
+            ? $video->getPathname()
+            : $video;
+
+        if (!file_exists($videoPath)) {
+            throw new UploadException("Video file not found: {$videoPath}");
+        }
+
+        // Check file size
+        $fileSize = filesize($videoPath);
+        $maxSize = $this->config['upload']['max_file_size'] ?? (128 * 1024 * 1024 * 1024);
+        if ($fileSize > $maxSize) {
+            throw new UploadException('Video file exceeds maximum allowed size');
+        }
+
+        try {
+            // Create video resource
+            $youtubeVideo = new Google_Service_YouTube_Video();
+
+            // Set snippet
+            $snippet = new Google_Service_YouTube_VideoSnippet();
+            $snippet->setTitle($metadata['title']);
+            $snippet->setDescription($metadata['description'] ?? '');
+            $snippet->setTags($metadata['tags'] ?? []);
+            $snippet->setCategoryId($metadata['category_id'] ?? $this->config['defaults']['category_id'] ?? '22');
+
+            if (isset($metadata['default_language'])) {
+                $snippet->setDefaultLanguage($metadata['default_language']);
+            }
+
+            $youtubeVideo->setSnippet($snippet);
+
+            // Set status
+            $status = new Google_Service_YouTube_VideoStatus();
+            $status->setPrivacyStatus($metadata['privacy_status'] ?? $this->config['defaults']['privacy_status'] ?? 'private');
+
+            if (isset($metadata['embeddable'])) {
+                $status->setEmbeddable($metadata['embeddable']);
+            }
+
+            if (isset($metadata['made_for_kids'])) {
+                $status->setMadeForKids($metadata['made_for_kids']);
+            }
+
+            if (isset($metadata['publish_at'])) {
+                $status->setPublishAt($metadata['publish_at']);
+            }
+
+            $youtubeVideo->setStatus($status);
+
+            // Configure upload
+            $chunkSize = $options['chunk_size'] ?? $this->config['upload']['chunk_size'] ?? (1 * 1024 * 1024);
+            $client = $this->authService->getClient();
+            $client->setDefer(true);
+
+            // Create upload request
+            $insertRequest = $this->youtube->videos->insert('snippet,status', $youtubeVideo);
+
+            // Create media upload
+            $media = new Google_Http_MediaFileUpload(
+                $client,
+                $insertRequest,
+                'video/*',
+                null,
+                true,
+                $chunkSize
+            );
+            $media->setFileSize($fileSize);
+
+            // Upload in chunks
+            $status = false;
+            $handle = fopen($videoPath, "rb");
+
+            while (!$status && !feof($handle)) {
+                $chunk = fread($handle, $chunkSize);
+                $status = $media->nextChunk($chunk);
+            }
+
+            fclose($handle);
+            $client->setDefer(false);
+
+            if (!$status || !isset($status['id'])) {
+                throw new UploadException('Upload failed - no video ID returned');
+            }
+
+            // Store video in database
+            $videoModel = new YouTubeVideo();
+            $videoModel->fill([
+                'user_id' => $this->activeToken->user_id,
+                'token_id' => $this->activeToken->id,
+                'video_id' => $status['id'],
+                'channel_id' => $this->activeToken->channel_id,
+                'title' => $metadata['title'],
+                'description' => $metadata['description'] ?? '',
+                'tags' => $metadata['tags'] ?? [],
+                'category_id' => $metadata['category_id'] ?? $this->config['defaults']['category_id'] ?? '22',
+                'privacy_status' => $metadata['privacy_status'] ?? $this->config['defaults']['privacy_status'] ?? 'private',
+                'made_for_kids' => $metadata['made_for_kids'] ?? false,
+                'upload_status' => 'uploaded',
+                'processing_status' => 'processing',
+            ]);
+            $videoModel->save();
+
+            // Set thumbnail if provided
+            if (isset($metadata['thumbnail'])) {
+                $this->setThumbnail($status['id'], $metadata['thumbnail']);
+            }
+
+            Log::info('Video uploaded successfully', [
+                'video_id' => $status['id'],
+                'user_id' => $this->activeToken->user_id,
+                'channel_id' => $this->activeToken->channel_id,
+            ]);
+
+            return $videoModel;
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        } catch (\Exception $e) {
+            throw new UploadException('Upload failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Update video metadata
+     *
+     * @param string $videoId
+     * @param array $metadata
+     * @return array
+     * @throws YouTubeException
+     */
+    public function updateVideo(string $videoId, array $metadata): array
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            // Get existing video
+            $response = $this->youtube->videos->listVideos('snippet,status', ['id' => $videoId]);
+
+            if (!$response->getItems()) {
+                throw new YouTubeException("Video not found: {$videoId}");
+            }
+
+            $video = $response->getItems()[0];
+
+            // Update snippet if provided
+            if (isset($metadata['title']) || isset($metadata['description']) || isset($metadata['tags']) || isset($metadata['category_id'])) {
+                $snippet = $video->getSnippet();
+
+                if (isset($metadata['title'])) {
+                    $snippet->setTitle($metadata['title']);
+                }
+                if (isset($metadata['description'])) {
+                    $snippet->setDescription($metadata['description']);
+                }
+                if (isset($metadata['tags'])) {
+                    $snippet->setTags($metadata['tags']);
+                }
+                if (isset($metadata['category_id'])) {
+                    $snippet->setCategoryId($metadata['category_id']);
+                }
+
+                $video->setSnippet($snippet);
+            }
+
+            // Update status if provided
+            if (isset($metadata['privacy_status']) || isset($metadata['embeddable']) || isset($metadata['made_for_kids'])) {
+                $status = $video->getStatus();
+
+                if (isset($metadata['privacy_status'])) {
+                    $status->setPrivacyStatus($metadata['privacy_status']);
+                }
+                if (isset($metadata['embeddable'])) {
+                    $status->setEmbeddable($metadata['embeddable']);
+                }
+                if (isset($metadata['made_for_kids'])) {
+                    $status->setMadeForKids($metadata['made_for_kids']);
+                }
+
+                $video->setStatus($status);
+            }
+
+            // Update video
+            $updatedVideo = $this->youtube->videos->update('snippet,status', $video);
+
+            // Update database record if exists
+            $videoModel = YouTubeVideo::where('video_id', $videoId)->first();
+            if ($videoModel) {
+                $videoModel->update([
+                    'title' => $metadata['title'] ?? $videoModel->title,
+                    'description' => $metadata['description'] ?? $videoModel->description,
+                    'tags' => $metadata['tags'] ?? $videoModel->tags,
+                    'category_id' => $metadata['category_id'] ?? $videoModel->category_id,
+                    'privacy_status' => $metadata['privacy_status'] ?? $videoModel->privacy_status,
+                    'embeddable' => $metadata['embeddable'] ?? $videoModel->embeddable,
+                    'made_for_kids' => $metadata['made_for_kids'] ?? $videoModel->made_for_kids,
+                ]);
+            }
+
+            Log::info('Video updated successfully', [
+                'video_id' => $videoId,
+                'updates' => array_keys($metadata),
+            ]);
+
+            return $this->formatVideoData($updatedVideo);
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Delete a video
+     *
+     * @param string $videoId
+     * @return bool
+     * @throws YouTubeException
+     */
+    public function deleteVideo(string $videoId): bool
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $this->youtube->videos->delete($videoId);
+
+            // Delete from database if exists
+            YouTubeVideo::where('video_id', $videoId)->delete();
+
+            Log::info('Video deleted successfully', [
+                'video_id' => $videoId,
+                'user_id' => $this->activeToken->user_id,
+            ]);
+
+            return true;
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Set video thumbnail
+     *
+     * @param string $videoId
+     * @param UploadedFile|string $thumbnail
+     * @return bool
+     * @throws YouTubeException
+     */
+    public function setThumbnail(string $videoId, $thumbnail): bool
+    {
+        $this->ensureAuthenticated();
+
+        $thumbnailPath = $thumbnail instanceof UploadedFile
+            ? $thumbnail->getPathname()
+            : $thumbnail;
+
+        if (!file_exists($thumbnailPath)) {
+            throw new YouTubeException("Thumbnail file not found: {$thumbnailPath}");
+        }
+
+        try {
+            $client = $this->authService->getClient();
+            $client->setDefer(true);
+
+            $setRequest = $this->youtube->thumbnails->set($videoId);
+
+            $media = new Google_Http_MediaFileUpload(
+                $client,
+                $setRequest,
+                'image/png',
+                null,
+                true,
+                1 * 1024 * 1024
+            );
+
+            $media->setFileSize(filesize($thumbnailPath));
+
+            $status = false;
+            $handle = fopen($thumbnailPath, "rb");
+
+            while (!$status && !feof($handle)) {
+                $chunk = fread($handle, 1 * 1024 * 1024);
+                $status = $media->nextChunk($chunk);
+            }
+
+            fclose($handle);
+            $client->setDefer(false);
+
+            Log::info('Thumbnail set successfully', ['video_id' => $videoId]);
+
+            return true;
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Get playlists
+     *
+     * @param array $options
+     * @return array
+     * @throws YouTubeException
+     */
+    public function getPlaylists(array $options = []): array
+    {
+        $this->ensureAuthenticated();
+
+        $defaults = [
+            'maxResults' => 50,
+            'mine' => true,
+        ];
+
+        $params = array_merge($defaults, $options);
+
+        try {
+            $response = $this->youtube->playlists->listPlaylists('snippet,contentDetails,status', $params);
+
+            $playlists = [];
+            foreach ($response->getItems() as $playlist) {
+                $playlists[] = $this->formatPlaylistData($playlist);
+            }
+
+            return [
+                'playlists' => $playlists,
+                'nextPageToken' => $response->getNextPageToken(),
+                'prevPageToken' => $response->getPrevPageToken(),
+                'totalResults' => $response->getPageInfo()->getTotalResults(),
+            ];
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Create a playlist
+     *
+     * @param array $data
+     * @return array
+     * @throws YouTubeException
+     */
+    public function createPlaylist(array $data): array
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $playlist = new \Google_Service_YouTube_Playlist();
+
+            $snippet = new \Google_Service_YouTube_PlaylistSnippet();
+            $snippet->setTitle($data['title']);
+            $snippet->setDescription($data['description'] ?? '');
+
+            if (isset($data['tags'])) {
+                $snippet->setTags($data['tags']);
+            }
+
+            $playlist->setSnippet($snippet);
+
+            if (isset($data['privacy_status'])) {
+                $status = new \Google_Service_YouTube_PlaylistStatus();
+                $status->setPrivacyStatus($data['privacy_status']);
+                $playlist->setStatus($status);
+            }
+
+            $createdPlaylist = $this->youtube->playlists->insert('snippet,status', $playlist);
+
+            Log::info('Playlist created successfully', [
+                'playlist_id' => $createdPlaylist->getId(),
+                'title' => $data['title'],
+            ]);
+
+            return $this->formatPlaylistData($createdPlaylist);
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Add video to playlist
+     *
+     * @param string $playlistId
+     * @param string $videoId
+     * @param int|null $position
+     * @return bool
+     * @throws YouTubeException
+     */
+    public function addToPlaylist(string $playlistId, string $videoId, ?int $position = null): bool
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $playlistItem = new \Google_Service_YouTube_PlaylistItem();
+
+            $snippet = new \Google_Service_YouTube_PlaylistItemSnippet();
+            $snippet->setPlaylistId($playlistId);
+
+            $resourceId = new \Google_Service_YouTube_ResourceId();
+            $resourceId->setKind('youtube#video');
+            $resourceId->setVideoId($videoId);
+            $snippet->setResourceId($resourceId);
+
+            if ($position !== null) {
+                $snippet->setPosition($position);
+            }
+
+            $playlistItem->setSnippet($snippet);
+
+            $this->youtube->playlistItems->insert('snippet', $playlistItem);
+
+            Log::info('Video added to playlist', [
+                'playlist_id' => $playlistId,
+                'video_id' => $videoId,
+            ]);
+
+            return true;
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Ensure user is authenticated
+     *
+     * @throws YouTubeException
+     */
+    protected function ensureAuthenticated(): void
+    {
+        if (!$this->activeToken) {
+            throw new YouTubeException('No active token set. Use forUser() or withToken() first.');
+        }
+
+        if (!$this->youtube) {
+            throw new YouTubeException('YouTube service not initialized');
+        }
+    }
+
+    /**
+     * Handle Google service exceptions
+     *
+     * @param \Google_Service_Exception $e
+     * @return YouTubeException
+     */
+    protected function handleGoogleException(\Google_Service_Exception $e): YouTubeException
+    {
+        $errors = $e->getErrors();
+
+        if (!empty($errors)) {
+            $error = $errors[0];
+            $reason = $error['reason'] ?? '';
+
+            if ($reason === 'quotaExceeded') {
+                return new QuotaExceededException(
+                    'YouTube API quota exceeded. Please try again later.',
+                    $e->getCode(),
+                    $e
+                );
+            }
+        }
+
+        return YouTubeException::fromGoogleServiceException($e);
+    }
+
+    /**
+     * Format channel data
+     *
+     * @param mixed $channel
+     * @return array
+     */
+    protected function formatChannelData($channel): array
+    {
+        $snippet = $channel->getSnippet();
+        $statistics = $channel->getStatistics();
+        $contentDetails = $channel->getContentDetails();
+
+        return [
+            'id' => $channel->getId(),
+            'title' => $snippet->getTitle(),
+            'description' => $snippet->getDescription(),
+            'custom_url' => $snippet->getCustomUrl(),
+            'published_at' => $snippet->getPublishedAt(),
+            'thumbnails' => [
+                'default' => $snippet->getThumbnails()->getDefault()->getUrl(),
+                'medium' => $snippet->getThumbnails()->getMedium()->getUrl(),
+                'high' => $snippet->getThumbnails()->getHigh()->getUrl(),
+            ],
+            'country' => $snippet->getCountry(),
+            'view_count' => $statistics->getViewCount(),
+            'subscriber_count' => $statistics->getSubscriberCount(),
+            'video_count' => $statistics->getVideoCount(),
+            'uploads_playlist' => $contentDetails->getRelatedPlaylists()->getUploads(),
+        ];
+    }
+
+    /**
+     * Format video data
+     *
+     * @param mixed $video
+     * @return array
+     */
+    protected function formatVideoData($video): array
+    {
+        $data = ['id' => null];
+
+        // Handle both Video and PlaylistItem objects
+        if (method_exists($video, 'getId')) {
+            $data['id'] = $video->getId();
+        } elseif (method_exists($video, 'getContentDetails')) {
+            $data['id'] = $video->getContentDetails()->getVideoId();
+        }
+
+        if (method_exists($video, 'getSnippet')) {
+            $snippet = $video->getSnippet();
+            $data['title'] = $snippet->getTitle();
+            $data['description'] = $snippet->getDescription();
+            $data['published_at'] = $snippet->getPublishedAt();
+            $data['channel_id'] = $snippet->getChannelId();
+            $data['tags'] = $snippet->getTags();
+            $data['category_id'] = $snippet->getCategoryId();
+
+            if ($snippet->getThumbnails()) {
+                $data['thumbnails'] = [
+                    'default' => $snippet->getThumbnails()->getDefault() ? $snippet->getThumbnails()->getDefault()->getUrl() : null,
+                    'medium' => $snippet->getThumbnails()->getMedium() ? $snippet->getThumbnails()->getMedium()->getUrl() : null,
+                    'high' => $snippet->getThumbnails()->getHigh() ? $snippet->getThumbnails()->getHigh()->getUrl() : null,
+                    'standard' => $snippet->getThumbnails()->getStandard() ? $snippet->getThumbnails()->getStandard()->getUrl() : null,
+                    'maxres' => $snippet->getThumbnails()->getMaxres() ? $snippet->getThumbnails()->getMaxres()->getUrl() : null,
+                ];
+            }
+        }
+
+        if (method_exists($video, 'getStatistics')) {
+            $statistics = $video->getStatistics();
+            $data['view_count'] = $statistics->getViewCount();
+            $data['like_count'] = $statistics->getLikeCount();
+            $data['dislike_count'] = $statistics->getDislikeCount();
+            $data['comment_count'] = $statistics->getCommentCount();
+        }
+
+        if (method_exists($video, 'getStatus')) {
+            $status = $video->getStatus();
+            $data['privacy_status'] = $status->getPrivacyStatus();
+            $data['embeddable'] = $status->getEmbeddable();
+            $data['license'] = $status->getLicense();
+            $data['made_for_kids'] = $status->getMadeForKids();
+            $data['upload_status'] = $status->getUploadStatus();
+            $data['failure_reason'] = $status->getFailureReason();
+            $data['rejection_reason'] = $status->getRejectionReason();
+        }
+
+        if (method_exists($video, 'getContentDetails')) {
+            $contentDetails = $video->getContentDetails();
+            $data['duration'] = $contentDetails->getDuration();
+            $data['definition'] = $contentDetails->getDefinition();
+            $data['caption'] = $contentDetails->getCaption();
+            $data['licensed_content'] = $contentDetails->getLicensedContent();
+            $data['projection'] = $contentDetails->getProjection();
+        }
+
+        return $data;
+    }
+
+    /**
+     * Format playlist data
+     *
+     * @param mixed $playlist
+     * @return array
+     */
+    protected function formatPlaylistData($playlist): array
+    {
+        $snippet = $playlist->getSnippet();
+        $contentDetails = $playlist->getContentDetails();
+        $status = $playlist->getStatus();
+
+        return [
+            'id' => $playlist->getId(),
+            'title' => $snippet->getTitle(),
+            'description' => $snippet->getDescription(),
+            'published_at' => $snippet->getPublishedAt(),
+            'channel_id' => $snippet->getChannelId(),
+            'tags' => $snippet->getTags(),
+            'thumbnails' => [
+                'default' => $snippet->getThumbnails()->getDefault()->getUrl(),
+                'medium' => $snippet->getThumbnails()->getMedium()->getUrl(),
+                'high' => $snippet->getThumbnails()->getHigh()->getUrl(),
+            ],
+            'item_count' => $contentDetails->getItemCount(),
+            'privacy_status' => $status->getPrivacyStatus(),
+        ];
+    }
+}

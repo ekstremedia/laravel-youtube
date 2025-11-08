@@ -1,0 +1,64 @@
+{
+    "name": "ekstremedia/laravel-youtube",
+    "description": "A modern Laravel package for YouTube API v3 integration with OAuth2, automatic token refresh, and beautiful admin panel",
+    "keywords": ["laravel", "youtube", "api", "video", "upload", "oauth2"],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Terje Nesthus",
+            "email": "terje@ekstremedia.no"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^11.0|^12.0",
+        "illuminate/http": "^11.0|^12.0",
+        "illuminate/database": "^11.0|^12.0",
+        "illuminate/view": "^11.0|^12.0",
+        "google/apiclient": "^2.15",
+        "google/apiclient-services": "^0.350"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0",
+        "pestphp/pest": "^2.34",
+        "pestphp/pest-plugin-laravel": "^2.3",
+        "laravel/pint": "^1.13",
+        "phpstan/phpstan": "^1.10"
+    },
+    "autoload": {
+        "psr-4": {
+            "EkstreMedia\\LaravelYouTube\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/",
+            "EkstreMedia\\LaravelYouTube\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage",
+        "format": "vendor/bin/pint",
+        "analyse": "vendor/bin/phpstan analyse"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "EkstreMedia\\LaravelYouTube\\YouTubeServiceProvider"
+            ],
+            "aliases": {
+                "YouTube": "EkstreMedia\\LaravelYouTube\\Facades\\YouTube"
+            }
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

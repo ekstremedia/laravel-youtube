@@ -1,9 +1,9 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube\Database\Factories;
+namespace Ekstremedia\LaravelYouTube\Database\Factories;
 
 use Carbon\Carbon;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
+use Ekstremedia\LaravelYouTube\Models\YouTubeToken;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Crypt;
 

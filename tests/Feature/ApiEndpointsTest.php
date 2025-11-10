@@ -1,7 +1,7 @@
 <?php
 
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
-use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
+use Ekstremedia\LaravelYouTube\Models\YouTubeToken;
+use Ekstremedia\LaravelYouTube\Models\YouTubeVideo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;

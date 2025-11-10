@@ -1,6 +1,6 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube\Http\Controllers;
+namespace Ekstremedia\LaravelYouTube\Http\Controllers;
 
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;

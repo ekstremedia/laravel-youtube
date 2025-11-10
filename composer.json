@@ -28,13 +28,13 @@
     },
     "autoload": {
         "psr-4": {
-            "EkstreMedia\\LaravelYouTube\\": "src/"
+            "Ekstremedia\\LaravelYouTube\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests/",
-            "EkstreMedia\\LaravelYouTube\\Database\\Factories\\": "database/factories/"
+            "Ekstremedia\\LaravelYouTube\\Database\\Factories\\": "database/factories/"
         }
     },
     "scripts": {
@@ -52,10 +52,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "EkstreMedia\\LaravelYouTube\\YouTubeServiceProvider"
+                "Ekstremedia\\LaravelYouTube\\YouTubeServiceProvider"
             ],
             "aliases": {
-                "YouTube": "EkstreMedia\\LaravelYouTube\\Facades\\YouTube"
+                "YouTube": "Ekstremedia\\LaravelYouTube\\Facades\\YouTube"
             }
         }
     },

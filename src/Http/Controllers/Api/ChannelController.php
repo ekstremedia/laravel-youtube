@@ -1,9 +1,9 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube\Http\Controllers\Api;
+namespace Ekstremedia\LaravelYouTube\Http\Controllers\Api;
 
-use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
+use Ekstremedia\LaravelYouTube\Http\Controllers\Controller;
+use Ekstremedia\LaravelYouTube\Services\YouTubeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

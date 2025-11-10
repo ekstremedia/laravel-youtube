@@ -1,8 +1,8 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube\Services;
+namespace Ekstremedia\LaravelYouTube\Services;
 
-use EkstreMedia\LaravelYouTube\Exceptions\YouTubeAuthException;
+use Ekstremedia\LaravelYouTube\Exceptions\YouTubeAuthException;
 use Google_Client;
 use Google_Service_Oauth2;
 use Google_Service_YouTube;

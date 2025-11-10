@@ -1,6 +1,6 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube\Exceptions;
+namespace Ekstremedia\LaravelYouTube\Exceptions;
 
 use Exception;
 

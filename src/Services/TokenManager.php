@@ -1,10 +1,10 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube\Services;
+namespace Ekstremedia\LaravelYouTube\Services;
 
 use Carbon\Carbon;
-use EkstreMedia\LaravelYouTube\Exceptions\TokenException;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
+use Ekstremedia\LaravelYouTube\Exceptions\TokenException;
+use Ekstremedia\LaravelYouTube\Models\YouTubeToken;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 

@@ -1,13 +1,13 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube\Services;
+namespace Ekstremedia\LaravelYouTube\Services;
 
-use EkstreMedia\LaravelYouTube\Exceptions\QuotaExceededException;
-use EkstreMedia\LaravelYouTube\Exceptions\TokenException;
-use EkstreMedia\LaravelYouTube\Exceptions\UploadException;
-use EkstreMedia\LaravelYouTube\Exceptions\YouTubeException;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
-use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
+use Ekstremedia\LaravelYouTube\Exceptions\QuotaExceededException;
+use Ekstremedia\LaravelYouTube\Exceptions\TokenException;
+use Ekstremedia\LaravelYouTube\Exceptions\UploadException;
+use Ekstremedia\LaravelYouTube\Exceptions\YouTubeException;
+use Ekstremedia\LaravelYouTube\Models\YouTubeToken;
+use Ekstremedia\LaravelYouTube\Models\YouTubeVideo;
 use Google_Http_MediaFileUpload;
 use Google_Service_YouTube;
 use Google_Service_YouTube_Video;

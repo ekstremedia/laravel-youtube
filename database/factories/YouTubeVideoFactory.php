@@ -1,9 +1,9 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube\Database\Factories;
+namespace Ekstremedia\LaravelYouTube\Database\Factories;
 
 use Carbon\Carbon;
-use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
+use Ekstremedia\LaravelYouTube\Models\YouTubeVideo;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class YouTubeVideoFactory extends Factory

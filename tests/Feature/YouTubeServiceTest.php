@@ -1,11 +1,11 @@
 <?php
 
-use EkstreMedia\LaravelYouTube\Exceptions\YouTubeException;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
-use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
-use EkstreMedia\LaravelYouTube\Services\AuthService;
-use EkstreMedia\LaravelYouTube\Services\TokenManager;
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
+use Ekstremedia\LaravelYouTube\Exceptions\YouTubeException;
+use Ekstremedia\LaravelYouTube\Models\YouTubeToken;
+use Ekstremedia\LaravelYouTube\Models\YouTubeVideo;
+use Ekstremedia\LaravelYouTube\Services\AuthService;
+use Ekstremedia\LaravelYouTube\Services\TokenManager;
+use Ekstremedia\LaravelYouTube\Services\YouTubeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 

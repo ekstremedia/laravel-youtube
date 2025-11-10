@@ -1,10 +1,10 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube\Console\Commands;
+namespace Ekstremedia\LaravelYouTube\Console\Commands;
 
 use Carbon\Carbon;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
-use EkstreMedia\LaravelYouTube\Services\TokenManager;
+use Ekstremedia\LaravelYouTube\Models\YouTubeToken;
+use Ekstremedia\LaravelYouTube\Services\TokenManager;
 use Illuminate\Console\Command;
 
 class ClearExpiredTokensCommand extends Command

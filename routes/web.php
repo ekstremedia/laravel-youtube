@@ -1,6 +1,6 @@
 <?php
 
-use EkstreMedia\LaravelYouTube\Http\Controllers\AuthController;
+use Ekstremedia\LaravelYouTube\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::group([

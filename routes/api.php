@@ -1,14 +1,17 @@
 <?php
 
-use EkstreMedia\LaravelYouTube\Http\Controllers\Api\ChannelController;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Api\PlaylistController;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Api\UploadController;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Api\VideoController;
+use Ekstremedia\LaravelYouTube\Http\Controllers\Api\ChannelController;
+use Ekstremedia\LaravelYouTube\Http\Controllers\Api\PlaylistController;
+use Ekstremedia\LaravelYouTube\Http\Controllers\Api\UploadController;
+use Ekstremedia\LaravelYouTube\Http\Controllers\Api\VideoController;
 use Illuminate\Support\Facades\Route;
 
 Route::group([
     'prefix' => 'api/' . config('youtube.routes.prefix', 'youtube'),
-    'middleware' => config('youtube.routes.api_middleware', ['api', 'throttle:60,1']),
+    'middleware' => array_merge(
+        config('youtube.routes.api_middleware', ['api']),
+        ['youtube.auth', 'youtube.ip', 'youtube.ratelimit'] // Add security middleware
+    ),
     'as' => 'youtube.api.',
 ], function () {
     // Channel endpoints

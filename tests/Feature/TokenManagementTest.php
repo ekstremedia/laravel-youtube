@@ -1,8 +1,8 @@
 <?php
 
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
-use EkstreMedia\LaravelYouTube\Services\AuthService;
-use EkstreMedia\LaravelYouTube\Services\TokenManager;
+use Ekstremedia\LaravelYouTube\Models\YouTubeToken;
+use Ekstremedia\LaravelYouTube\Services\AuthService;
+use Ekstremedia\LaravelYouTube\Services\TokenManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;

@@ -1,11 +1,11 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube\Http\Controllers\Admin;
+namespace Ekstremedia\LaravelYouTube\Http\Controllers\Admin;
 
-use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
-use EkstreMedia\LaravelYouTube\Services\AuthService;
-use EkstreMedia\LaravelYouTube\Services\TokenManager;
+use Ekstremedia\LaravelYouTube\Http\Controllers\Controller;
+use Ekstremedia\LaravelYouTube\Models\YouTubeToken;
+use Ekstremedia\LaravelYouTube\Services\AuthService;
+use Ekstremedia\LaravelYouTube\Services\TokenManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;

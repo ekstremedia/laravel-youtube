@@ -1,10 +1,10 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube\Http\Controllers\Admin;
+namespace Ekstremedia\LaravelYouTube\Http\Controllers\Admin;
 
-use EkstreMedia\LaravelYouTube\Http\Controllers\Controller;
-use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
+use Ekstremedia\LaravelYouTube\Http\Controllers\Controller;
+use Ekstremedia\LaravelYouTube\Models\YouTubeVideo;
+use Ekstremedia\LaravelYouTube\Services\YouTubeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

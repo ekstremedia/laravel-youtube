@@ -1,9 +1,9 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube\Jobs;
+namespace Ekstremedia\LaravelYouTube\Jobs;
 
-use EkstreMedia\LaravelYouTube\Facades\YouTube;
-use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
+use Ekstremedia\LaravelYouTube\Facades\YouTube;
+use Ekstremedia\LaravelYouTube\Models\YouTubeVideo;
 use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;

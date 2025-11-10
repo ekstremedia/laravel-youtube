@@ -1,6 +1,6 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube\Models;
+namespace Ekstremedia\LaravelYouTube\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -287,6 +287,6 @@ class YouTubeToken extends Model
      */
     protected static function newFactory()
     {
-        return \EkstreMedia\LaravelYouTube\Database\Factories\YouTubeTokenFactory::new();
+        return \Ekstremedia\LaravelYouTube\Database\Factories\YouTubeTokenFactory::new();
     }
 }

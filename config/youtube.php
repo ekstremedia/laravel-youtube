@@ -145,4 +145,64 @@ return [
         'channel' => env('YOUTUBE_LOG_CHANNEL', 'youtube'),
         'level' => env('YOUTUBE_LOG_LEVEL', 'info'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Security Settings
+    |--------------------------------------------------------------------------
+    |
+    | Enhanced security configuration for the YouTube package.
+    |
+    | - csrf_protection: Enable CSRF protection for OAuth callbacks
+    | - ip_whitelist: Restrict API access to specific IP addresses
+    | - webhook_signing: Verify webhook signatures
+    | - token_encryption: Use strong encryption for stored tokens (always enabled)
+    | - allowed_upload_mime_types: Whitelist of allowed video MIME types
+    |
+    */
+    'security' => [
+        // CSRF Protection
+        'csrf_protection' => env('YOUTUBE_CSRF_PROTECTION', true),
+
+        // IP Whitelist (leave empty to allow all)
+        'ip_whitelist' => array_filter(explode(',', env('YOUTUBE_IP_WHITELIST', ''))),
+
+        // API Key for programmatic access (alternative to OAuth for server-to-server)
+        'api_key' => env('YOUTUBE_API_KEY'),
+        'api_key_header' => env('YOUTUBE_API_KEY_HEADER', 'X-YouTube-API-Key'),
+
+        // Webhook Signature Verification
+        'webhook_signing' => [
+            'enabled' => env('YOUTUBE_WEBHOOK_SIGNING_ENABLED', true),
+            'secret' => env('YOUTUBE_WEBHOOK_SECRET'),
+            'header' => env('YOUTUBE_WEBHOOK_SIGNATURE_HEADER', 'X-YouTube-Signature'),
+            'algorithm' => env('YOUTUBE_WEBHOOK_ALGORITHM', 'sha256'),
+        ],
+
+        // Allowed Video MIME Types (security measure)
+        'allowed_upload_mime_types' => [
+            'video/mp4',
+            'video/mpeg',
+            'video/quicktime',
+            'video/x-msvideo',
+            'video/x-flv',
+            'video/webm',
+            'video/x-matroska',
+        ],
+
+        // Maximum allowed file extensions
+        'allowed_upload_extensions' => ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'],
+
+        // User authorization
+        'require_verified_email' => env('YOUTUBE_REQUIRE_VERIFIED_EMAIL', false),
+        'require_terms_acceptance' => env('YOUTUBE_REQUIRE_TERMS', false),
+
+        // Admin panel access control
+        'admin_permission' => env('YOUTUBE_ADMIN_PERMISSION', 'manage-youtube'),
+        'admin_role' => env('YOUTUBE_ADMIN_ROLE'), // e.g., 'admin'
+
+        // Token security
+        'token_refresh_threshold' => 300, // Refresh tokens 5 minutes before expiry
+        'revoke_on_logout' => env('YOUTUBE_REVOKE_ON_LOGOUT', false),
+    ],
 ];

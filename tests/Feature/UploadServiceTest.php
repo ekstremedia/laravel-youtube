@@ -1,9 +1,9 @@
 <?php
 
-use EkstreMedia\LaravelYouTube\Exceptions\UploadException;
-use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
-use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
+use Ekstremedia\LaravelYouTube\Exceptions\UploadException;
+use Ekstremedia\LaravelYouTube\Models\YouTubeToken;
+use Ekstremedia\LaravelYouTube\Models\YouTubeVideo;
+use Ekstremedia\LaravelYouTube\Services\YouTubeService;
 use Google\Service\YouTube;
 use Google\Service\YouTube\Video;
 use Google\Service\YouTube\VideoSnippet;
@@ -435,7 +435,7 @@ describe('Upload for Raspberry Pi Integration', function () {
         Storage::put('pi-uploads/test.mp4', 'content');
 
         // Dispatch upload job
-        \EkstreMedia\LaravelYouTube\Jobs\UploadVideoJob::dispatch(
+        \Ekstremedia\LaravelYouTube\Jobs\UploadVideoJob::dispatch(
             $user->id,
             $videoPath,
             [
@@ -444,6 +444,6 @@ describe('Upload for Raspberry Pi Integration', function () {
             ]
         );
 
-        Queue::assertPushed(\EkstreMedia\LaravelYouTube\Jobs\UploadVideoJob::class);
+        Queue::assertPushed(\Ekstremedia\LaravelYouTube\Jobs\UploadVideoJob::class);
     });
 });

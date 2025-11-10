@@ -1,13 +1,19 @@
 <?php
 
-namespace EkstreMedia\LaravelYouTube;
+namespace Ekstremedia\LaravelYouTube;
 
-use EkstreMedia\LaravelYouTube\Console\Commands\ClearExpiredTokensCommand;
-use EkstreMedia\LaravelYouTube\Console\Commands\RefreshTokensCommand;
-use EkstreMedia\LaravelYouTube\Services\AuthService;
-use EkstreMedia\LaravelYouTube\Services\TokenManager;
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
+use Ekstremedia\LaravelYouTube\Console\Commands\ClearExpiredTokensCommand;
+use Ekstremedia\LaravelYouTube\Console\Commands\RefreshTokensCommand;
+use Ekstremedia\LaravelYouTube\Http\Middleware\YouTubeAdminAccess;
+use Ekstremedia\LaravelYouTube\Http\Middleware\YouTubeApiAuth;
+use Ekstremedia\LaravelYouTube\Http\Middleware\YouTubeIpWhitelist;
+use Ekstremedia\LaravelYouTube\Http\Middleware\YouTubeRateLimit;
+use Ekstremedia\LaravelYouTube\Http\Middleware\YouTubeWebhookSignature;
+use Ekstremedia\LaravelYouTube\Services\AuthService;
+use Ekstremedia\LaravelYouTube\Services\TokenManager;
+use Ekstremedia\LaravelYouTube\Services\YouTubeService;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 
 class YouTubeServiceProvider extends ServiceProvider
@@ -58,6 +64,14 @@ class YouTubeServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register middleware
+        $router = $this->app->make(Router::class);
+        $router->aliasMiddleware('youtube.auth', YouTubeApiAuth::class);
+        $router->aliasMiddleware('youtube.ip', YouTubeIpWhitelist::class);
+        $router->aliasMiddleware('youtube.webhook', YouTubeWebhookSignature::class);
+        $router->aliasMiddleware('youtube.admin', YouTubeAdminAccess::class);
+        $router->aliasMiddleware('youtube.ratelimit', YouTubeRateLimit::class);
+
         // Publish configuration
         $this->publishes([
             __DIR__ . '/../config/youtube.php' => config_path('youtube.php'),
@@ -115,10 +129,10 @@ class YouTubeServiceProvider extends ServiceProvider
 
         // Register view components (TODO: Implement these components)
         // $this->loadViewComponentsAs('youtube', [
-        //     'upload-form' => \EkstreMedia\LaravelYouTube\View\Components\UploadForm::class,
-        //     'video-list' => \EkstreMedia\LaravelYouTube\View\Components\VideoList::class,
-        //     'channel-info' => \EkstreMedia\LaravelYouTube\View\Components\ChannelInfo::class,
-        //     'auth-button' => \EkstreMedia\LaravelYouTube\View\Components\AuthButton::class,
+        //     'upload-form' => \Ekstremedia\LaravelYouTube\View\Components\UploadForm::class,
+        //     'video-list' => \Ekstremedia\LaravelYouTube\View\Components\VideoList::class,
+        //     'channel-info' => \Ekstremedia\LaravelYouTube\View\Components\ChannelInfo::class,
+        //     'auth-button' => \Ekstremedia\LaravelYouTube\View\Components\AuthButton::class,
         // ]);
     }
 }

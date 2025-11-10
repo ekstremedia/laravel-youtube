@@ -1,18 +1,19 @@
 <?php
 
-use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\ChannelsController;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\DashboardController;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\PlaylistsController;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\TokensController;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\UploadController;
-use EkstreMedia\LaravelYouTube\Http\Controllers\Admin\VideosController;
+use Ekstremedia\LaravelYouTube\Http\Controllers\Admin\ChannelsController;
+use Ekstremedia\LaravelYouTube\Http\Controllers\Admin\DashboardController;
+use Ekstremedia\LaravelYouTube\Http\Controllers\Admin\PlaylistsController;
+use Ekstremedia\LaravelYouTube\Http\Controllers\Admin\TokensController;
+use Ekstremedia\LaravelYouTube\Http\Controllers\Admin\UploadController;
+use Ekstremedia\LaravelYouTube\Http\Controllers\Admin\VideosController;
 use Illuminate\Support\Facades\Route;
 
 Route::group([
     'prefix' => config('youtube.admin.prefix', 'youtube-admin'),
     'middleware' => array_merge(
         config('youtube.admin.middleware', ['web']),
-        config('youtube.admin.auth_middleware', ['auth'])
+        config('youtube.admin.auth_middleware', ['auth']),
+        ['youtube.admin', 'youtube.ip'] // Add security middleware
     ),
     'as' => 'youtube.admin.',
 ], function () {

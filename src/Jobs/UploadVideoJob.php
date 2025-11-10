@@ -4,18 +4,21 @@ namespace EkstreMedia\LaravelYouTube\Jobs;
 
 use EkstreMedia\LaravelYouTube\Facades\YouTube;
 use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
+use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
-use Exception;
+use Illuminate\Support\Facades\Log;
 
 class UploadVideoJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     /**
      * The number of times the job may be attempted.
@@ -59,7 +62,7 @@ class UploadVideoJob implements ShouldQueue
             ]);
 
             // Check if file exists
-            if (!file_exists($this->videoPath)) {
+            if (! file_exists($this->videoPath)) {
                 throw new Exception("Video file not found: {$this->videoPath}");
             }
 
@@ -78,11 +81,11 @@ class UploadVideoJob implements ShouldQueue
                             'bytes_uploaded' => $bytesUploaded,
                             'total_bytes' => $totalBytes,
                         ]);
-                    }
+                    },
                 ]
             );
 
-            Log::info("Video uploaded successfully", [
+            Log::info('Video uploaded successfully', [
                 'video_id' => $uploadedVideo->video_id,
                 'title' => $uploadedVideo->title,
             ]);
@@ -93,7 +96,7 @@ class UploadVideoJob implements ShouldQueue
                     $youtube->setThumbnail($uploadedVideo->video_id, $this->thumbnailPath);
                     Log::info("Thumbnail set successfully for video {$uploadedVideo->video_id}");
                 } catch (Exception $e) {
-                    Log::error("Failed to set thumbnail: " . $e->getMessage());
+                    Log::error('Failed to set thumbnail: ' . $e->getMessage());
                     // Don't fail the job if thumbnail upload fails
                 }
             }
@@ -104,7 +107,7 @@ class UploadVideoJob implements ShouldQueue
                     $youtube->addToPlaylist($this->playlistId, $uploadedVideo->video_id);
                     Log::info("Video added to playlist {$this->playlistId}");
                 } catch (Exception $e) {
-                    Log::error("Failed to add video to playlist: " . $e->getMessage());
+                    Log::error('Failed to add video to playlist: ' . $e->getMessage());
                     // Don't fail the job if playlist addition fails
                 }
             }
@@ -123,7 +126,7 @@ class UploadVideoJob implements ShouldQueue
             }
 
         } catch (Exception $e) {
-            Log::error("YouTube upload job failed", [
+            Log::error('YouTube upload job failed', [
                 'user_id' => $this->userId,
                 'video_path' => $this->videoPath,
                 'error' => $e->getMessage(),
@@ -155,15 +158,15 @@ class UploadVideoJob implements ShouldQueue
                 ->post($this->notifyUrl, $payload);
 
             if ($response->successful()) {
-                Log::info("Webhook notified successfully", ['url' => $this->notifyUrl]);
+                Log::info('Webhook notified successfully', ['url' => $this->notifyUrl]);
             } else {
-                Log::warning("Webhook notification failed", [
+                Log::warning('Webhook notification failed', [
                     'url' => $this->notifyUrl,
                     'status' => $response->status(),
                 ]);
             }
         } catch (Exception $e) {
-            Log::error("Failed to notify webhook", [
+            Log::error('Failed to notify webhook', [
                 'url' => $this->notifyUrl,
                 'error' => $e->getMessage(),
             ]);
@@ -175,7 +178,7 @@ class UploadVideoJob implements ShouldQueue
      */
     public function failed(?Exception $exception): void
     {
-        Log::error("YouTube upload job permanently failed", [
+        Log::error('YouTube upload job permanently failed', [
             'user_id' => $this->userId,
             'video_path' => $this->videoPath,
             'metadata' => $this->metadata,
@@ -191,7 +194,7 @@ class UploadVideoJob implements ShouldQueue
                     'video_path' => basename($this->videoPath),
                 ]);
             } catch (Exception $e) {
-                Log::error("Failed to notify webhook about failure", [
+                Log::error('Failed to notify webhook about failure', [
                     'url' => $this->notifyUrl,
                     'error' => $e->getMessage(),
                 ]);

@@ -216,11 +216,10 @@ class YouTubeToken extends Model
      * Check if token has a specific scope.
      *
      * @param  string  $scope  The scope to check for (can be partial, e.g., 'youtube.upload')
-     * @return bool
      */
     public function hasScope(string $scope): bool
     {
-        if (!$this->scopes || !is_array($this->scopes)) {
+        if (! $this->scopes || ! is_array($this->scopes)) {
             return false;
         }
 

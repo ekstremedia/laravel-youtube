@@ -83,7 +83,14 @@ class TokenManager
                 : Carbon::now()->addHour();
             $tokenModel->expires_at = $expiresAt;
 
-            $tokenModel->scopes = $tokenData['scope'] ?? $this->config['scopes'] ?? null;
+            // Convert scope string to array if needed
+            if (isset($tokenData['scope'])) {
+                $tokenModel->scopes = is_string($tokenData['scope'])
+                    ? explode(' ', $tokenData['scope'])
+                    : $tokenData['scope'];
+            } else {
+                $tokenModel->scopes = $this->config['scopes'] ?? null;
+            }
             $tokenModel->channel_metadata = $channelInfo;
             $tokenModel->is_active = true;
             $tokenModel->last_refreshed_at = Carbon::now();

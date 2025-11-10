@@ -91,6 +91,7 @@ abstract class TestCase extends Orchestra
         $user = new class extends \Illuminate\Foundation\Auth\User
         {
             protected $table = 'users';
+
             protected $fillable = ['name', 'email', 'password'];
         };
 

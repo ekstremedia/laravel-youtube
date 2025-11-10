@@ -4,8 +4,8 @@ use EkstreMedia\LaravelYouTube\Models\YouTubeToken;
 use EkstreMedia\LaravelYouTube\Models\YouTubeVideo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -53,13 +53,13 @@ describe('Video API Endpoints', function () {
                         'like_count',
                         'watch_url',
                         'thumbnail',
-                    ]
+                    ],
                 ],
                 'meta' => [
                     'total',
                     'per_page',
                     'current_page',
-                ]
+                ],
             ]);
     });
 
@@ -77,7 +77,7 @@ describe('Video API Endpoints', function () {
                 'data' => [
                     'video_id' => 'test-123',
                     'title' => $video->title,
-                ]
+                ],
             ]);
     });
 
@@ -101,7 +101,7 @@ describe('Video API Endpoints', function () {
                 'message' => 'Video updated successfully',
                 'data' => [
                     'title' => 'Updated Title',
-                ]
+                ],
             ]);
     });
 
@@ -241,7 +241,7 @@ describe('Channel API Endpoints', function () {
                 'data' => [
                     'channel_id' => 'UC123456',
                     'channel_title' => 'Test Channel',
-                ]
+                ],
             ]);
     });
 
@@ -270,8 +270,8 @@ describe('Channel API Endpoints', function () {
                         'title',
                         'description',
                         'item_count',
-                    ]
-                ]
+                    ],
+                ],
             ]);
     });
 });
@@ -303,7 +303,7 @@ describe('Playlist API Endpoints', function () {
                     'id',
                     'title',
                     'description',
-                ]
+                ],
             ]);
     });
 
@@ -404,4 +404,3 @@ describe('Authentication', function () {
         $this->markTestSkipped('API controllers not fully implemented yet');
     });
 });
-

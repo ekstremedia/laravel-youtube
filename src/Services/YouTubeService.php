@@ -710,23 +710,50 @@ class YouTubeService
         $statistics = $channel->getStatistics();
         $contentDetails = $channel->getContentDetails();
 
-        return [
+        $data = [
             'id' => $channel->getId(),
-            'title' => $snippet->getTitle(),
-            'description' => $snippet->getDescription(),
-            'custom_url' => $snippet->getCustomUrl(),
-            'published_at' => $snippet->getPublishedAt(),
-            'thumbnails' => [
-                'default' => $snippet->getThumbnails()->getDefault()->getUrl(),
-                'medium' => $snippet->getThumbnails()->getMedium()->getUrl(),
-                'high' => $snippet->getThumbnails()->getHigh()->getUrl(),
-            ],
-            'country' => $snippet->getCountry(),
-            'view_count' => $statistics->getViewCount(),
-            'subscriber_count' => $statistics->getSubscriberCount(),
-            'video_count' => $statistics->getVideoCount(),
-            'uploads_playlist' => $contentDetails->getRelatedPlaylists()->getUploads(),
         ];
+
+        // Add snippet data if available
+        if ($snippet) {
+            $data['title'] = $snippet->getTitle();
+            $data['description'] = $snippet->getDescription();
+            $data['custom_url'] = $snippet->getCustomUrl();
+            $data['published_at'] = $snippet->getPublishedAt();
+            $data['country'] = $snippet->getCountry();
+
+            // Add thumbnails if available
+            $thumbnails = $snippet->getThumbnails();
+            if ($thumbnails) {
+                $data['thumbnails'] = [];
+                if ($thumbnails->getDefault()) {
+                    $data['thumbnails']['default'] = $thumbnails->getDefault()->getUrl();
+                }
+                if ($thumbnails->getMedium()) {
+                    $data['thumbnails']['medium'] = $thumbnails->getMedium()->getUrl();
+                }
+                if ($thumbnails->getHigh()) {
+                    $data['thumbnails']['high'] = $thumbnails->getHigh()->getUrl();
+                }
+            }
+        }
+
+        // Add statistics data if available
+        if ($statistics) {
+            $data['view_count'] = $statistics->getViewCount();
+            $data['subscriber_count'] = $statistics->getSubscriberCount();
+            $data['video_count'] = $statistics->getVideoCount();
+        }
+
+        // Add content details if available
+        if ($contentDetails) {
+            $relatedPlaylists = $contentDetails->getRelatedPlaylists();
+            if ($relatedPlaylists) {
+                $data['uploads_playlist'] = $relatedPlaylists->getUploads();
+            }
+        }
+
+        return $data;
     }
 
     /**

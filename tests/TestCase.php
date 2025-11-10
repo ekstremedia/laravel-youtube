@@ -80,4 +80,25 @@ abstract class TestCase extends Orchestra
         // Run migrations
         $this->artisan('migrate', ['--database' => 'testbench'])->run();
     }
+
+    /**
+     * Create a test user for authentication testing.
+     *
+     * @return \Illuminate\Foundation\Auth\User
+     */
+    protected function createTestUser()
+    {
+        $user = new class extends \Illuminate\Foundation\Auth\User
+        {
+            protected $table = 'users';
+            protected $fillable = ['name', 'email', 'password'];
+        };
+
+        $user->name = 'Test User ' . rand(1000, 9999);
+        $user->email = 'test' . rand(1000, 9999) . '@example.com';
+        $user->password = bcrypt('password');
+        $user->save();
+
+        return $user;
+    }
 }

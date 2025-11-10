@@ -1,33 +1,46 @@
 # Laravel YouTube Package
 
-A modern, comprehensive Laravel package for YouTube API v3 integration with OAuth2 authentication, automatic token refresh, and a beautiful dark-purple themed admin panel.
-
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/ekstremedia/laravel-youtube.svg?style=flat-square)](https://packagist.org/packages/ekstremedia/laravel-youtube)
 [![Tests](https://github.com/ekstremedia/laravel-youtube/actions/workflows/tests.yml/badge.svg)](https://github.com/ekstremedia/laravel-youtube/actions/workflows/tests.yml)
-[![Compatibility](https://github.com/ekstremedia/laravel-youtube/actions/workflows/compatibility.yml/badge.svg)](https://github.com/ekstremedia/laravel-youtube/actions/workflows/compatibility.yml)
-[![codecov](https://codecov.io/gh/ekstremedia/laravel-youtube/branch/main/graph/badge.svg)](https://codecov.io/gh/ekstremedia/laravel-youtube)
+[![Total Downloads](https://img.shields.io/packagist/dt/ekstremedia/laravel-youtube.svg?style=flat-square)](https://packagist.org/packages/ekstremedia/laravel-youtube)
+[![License](https://img.shields.io/packagist/l/ekstremedia/laravel-youtube.svg?style=flat-square)](https://packagist.org/packages/ekstremedia/laravel-youtube)
 ![Laravel](https://img.shields.io/badge/Laravel-11%2B%20%7C%2012%2B-red)
-![PHP](https://img.shields.io/badge/PHP-8.2%20%7C%208.3-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
+![PHP](https://img.shields.io/badge/PHP-8.2%2B-blue)
 
-## Features
+A comprehensive Laravel package for YouTube API v3 integration with OAuth2 authentication, automatic token refresh, upload management, and extensive API coverage. Perfect for content creators, video platforms, and automated video upload systems.
 
-- 🔐 **OAuth2 Authentication** with automatic token refresh
-- 📹 **Video Management** - Upload, update, delete videos
-- 📺 **Channel Management** - Connect and manage multiple YouTube channels
-- 📝 **Playlist Management** - Create and manage playlists
-- 🎨 **Beautiful Admin Panel** - Dark purple themed UI with Alpine.js
-- 🔄 **Automatic Token Refresh** - Never worry about expired tokens
-- 📊 **Analytics Dashboard** - View channel and video statistics
-- 🧪 **Test Driven** - Comprehensive Pest test suite
-- 🎯 **Laravel 12+ Compatible** - Built for the latest Laravel versions
+## 🚀 Features
 
-## Requirements
+### Core Features
+- 🔐 **OAuth2 Authentication** - Secure authentication with automatic token refresh
+- 📹 **Video Management** - Complete CRUD operations for videos
+- 📤 **Advanced Upload** - Chunked uploads with progress tracking
+- 📺 **Channel Management** - Multi-channel support per user
+- 📝 **Playlist Management** - Create, update, and manage playlists
+- 🎨 **Thumbnail Management** - Custom thumbnail upload support
+- 🔄 **Queue Support** - Background video uploads via Laravel jobs
+- 🎯 **Rate Limiting** - Built-in rate limiting to respect API quotas
+- 📊 **Statistics Tracking** - View counts, likes, and engagement metrics
+- 🌐 **Webhook Support** - Upload completion notifications
+
+### Special Features
+- 🥧 **Raspberry Pi Integration** - Optimized for automated uploads from IoT devices
+- 🔄 **Auto Token Refresh** - Never worry about expired tokens
+- 💾 **Database Storage** - Track all uploads and video metadata
+- 🔒 **Encrypted Token Storage** - Secure storage of OAuth tokens
+- 📝 **Comprehensive Logging** - Detailed logging for debugging
+- 🎨 **Admin Panel** - Optional web interface for management
+- 🧪 **Test Coverage** - Extensive test suite with Pest
+
+## 📋 Requirements
 
 - PHP 8.2 or higher
-- Laravel 11.0 or higher
+- Laravel 11.0 or 12.0
 - Google API credentials (OAuth 2.0 Client ID)
+- Composer
+- Database (MySQL, PostgreSQL, SQLite)
 
-## Installation
+## 📦 Installation
 
 ### Step 1: Install via Composer
 
@@ -35,20 +48,20 @@ A modern, comprehensive Laravel package for YouTube API v3 integration with OAut
 composer require ekstremedia/laravel-youtube
 ```
 
-### Step 2: Publish Configuration and Assets
+### Step 2: Publish Configuration and Migrations
 
 ```bash
 # Publish configuration
-php artisan vendor:publish --tag=youtube-config
+php artisan vendor:publish --provider="EkstreMedia\LaravelYouTube\YouTubeServiceProvider" --tag="youtube-config"
 
 # Publish migrations
-php artisan vendor:publish --tag=youtube-migrations
+php artisan vendor:publish --provider="EkstreMedia\LaravelYouTube\YouTubeServiceProvider" --tag="youtube-migrations"
 
-# Publish views (optional, if you want to customize)
-php artisan vendor:publish --tag=youtube-views
+# Optional: Publish views for admin panel
+php artisan vendor:publish --provider="EkstreMedia\LaravelYouTube\YouTubeServiceProvider" --tag="youtube-views"
 
-# Publish assets (CSS/JS for admin panel)
-php artisan vendor:publish --tag=youtube-assets
+# Optional: Publish assets for admin panel
+php artisan vendor:publish --provider="EkstreMedia\LaravelYouTube\YouTubeServiceProvider" --tag="youtube-assets"
 ```
 
 ### Step 3: Configure Environment Variables
@@ -56,27 +69,45 @@ php artisan vendor:publish --tag=youtube-assets
 Add the following to your `.env` file:
 
 ```env
-# YouTube OAuth2 Credentials
+# Required: YouTube OAuth2 Credentials
 YOUTUBE_CLIENT_ID=your-client-id-here
 YOUTUBE_CLIENT_SECRET=your-client-secret-here
-YOUTUBE_REDIRECT_URI=/youtube/callback
+YOUTUBE_REDIRECT_URI=https://yourdomain.com/youtube/callback
 
-# Optional Settings
+# Optional: Admin Panel
 YOUTUBE_ADMIN_ENABLED=true
 YOUTUBE_ADMIN_PREFIX=youtube-admin
-YOUTUBE_DEFAULT_PRIVACY=private
+
+# Optional: Upload Settings
+YOUTUBE_UPLOAD_CHUNK_SIZE=10485760  # 10MB chunks
+YOUTUBE_UPLOAD_TIMEOUT=3600         # 1 hour
+YOUTUBE_UPLOAD_MAX_SIZE=137438953472 # 128GB (YouTube's max)
+
+# Optional: Default Settings
+YOUTUBE_DEFAULT_PRIVACY=private     # private, unlisted, public
+YOUTUBE_DEFAULT_CATEGORY=22         # People & Blogs
+YOUTUBE_DEFAULT_LANGUAGE=en
+
+# Optional: Rate Limiting
 YOUTUBE_RATE_LIMIT_ENABLED=true
+YOUTUBE_RATE_LIMIT_PER_MINUTE=60
+YOUTUBE_RATE_LIMIT_PER_HOUR=3000
+
+# Optional: Logging
 YOUTUBE_LOGGING_ENABLED=true
+YOUTUBE_LOGGING_CHANNEL=youtube
+YOUTUBE_LOGGING_LEVEL=info
 ```
 
 ### Step 4: Obtain Google API Credentials
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
 2. Create a new project or select an existing one
-3. Enable the YouTube Data API v3
-4. Create OAuth 2.0 credentials
-5. Add authorized redirect URI: `https://yourdomain.com/youtube/callback`
-6. Copy the Client ID and Client Secret to your `.env` file
+3. Enable the **YouTube Data API v3**
+4. Create OAuth 2.0 credentials:
+   - Application type: Web application
+   - Add authorized redirect URI: `https://yourdomain.com/youtube/callback`
+5. Copy the Client ID and Client Secret to your `.env` file
 
 ### Step 5: Run Migrations
 
@@ -84,196 +115,537 @@ YOUTUBE_LOGGING_ENABLED=true
 php artisan migrate
 ```
 
-## Usage
+## 🎯 Quick Start
 
-### Basic Usage with Facade
+### Basic Usage
 
 ```php
 use EkstreMedia\LaravelYouTube\Facades\YouTube;
 
-// Set user context
-$youtube = YouTube::forUser(auth()->id());
+// Authenticate user (redirect to Google)
+return redirect()->to(YouTube::getAuthUrl());
 
-// Get channel information
-$channel = $youtube->getChannel();
+// After authentication, upload a video
+$video = YouTube::forUser(auth()->id())
+    ->uploadVideo(
+        '/path/to/video.mp4',
+        [
+            'title' => 'My Amazing Video',
+            'description' => 'This is a great video!',
+            'tags' => ['laravel', 'youtube', 'api'],
+            'category_id' => '22',
+            'privacy_status' => 'public',
+        ]
+    );
 
-// Get videos
-$videos = $youtube->getVideos([
+echo "Video uploaded: " . $video->watch_url;
+```
+
+### Raspberry Pi Integration Example
+
+Perfect for automated timelapse or security camera uploads:
+
+```php
+// In your Pi upload endpoint
+use EkstreMedia\LaravelYouTube\Jobs\UploadVideoJob;
+
+Route::post('/api/pi/upload', function (Request $request) {
+    $request->validate([
+        'video' => 'required|file|mimes:mp4,avi,mov|max:5242880', // 5GB
+        'camera_id' => 'required|string',
+    ]);
+
+    $path = $request->file('video')->store('pi-uploads');
+
+    // Queue the upload job
+    UploadVideoJob::dispatch(
+        auth()->id(),
+        storage_path('app/' . $path),
+        [
+            'title' => "Pi Camera {$request->camera_id} - " . now()->format('Y-m-d'),
+            'description' => 'Automated upload from Raspberry Pi',
+            'tags' => ['raspberry-pi', 'timelapse', $request->camera_id],
+            'privacy_status' => 'unlisted',
+        ],
+        channelId: null,
+        playlistId: 'PLxxxxxx', // Add to specific playlist
+        notifyUrl: 'https://yourapp.com/webhook/upload-complete'
+    )->onQueue('media');
+
+    return response()->json(['message' => 'Upload queued']);
+});
+```
+
+## 📚 Comprehensive Documentation
+
+### Authentication & Token Management
+
+#### OAuth Flow
+
+```php
+use EkstreMedia\LaravelYouTube\Services\AuthService;
+
+$authService = app(AuthService::class);
+
+// Generate OAuth URL with state for CSRF protection
+$state = Str::random(40);
+session(['youtube_oauth_state' => $state]);
+$authUrl = $authService->getAuthUrl($state);
+
+// In callback handler
+if (request('state') !== session('youtube_oauth_state')) {
+    abort(403, 'Invalid state');
+}
+
+// Exchange code for tokens
+$tokens = $authService->exchangeCode(request('code'));
+```
+
+#### Token Storage & Management
+
+```php
+use EkstreMedia\LaravelYouTube\Services\TokenManager;
+
+$tokenManager = app(TokenManager::class);
+
+// Store tokens after OAuth
+$token = $tokenManager->storeToken(
+    $tokens,
+    $channelInfo,
+    auth()->id()
+);
+
+// Get active token for user
+$token = $tokenManager->getActiveToken(auth()->id());
+
+// Check if refresh needed (within 5 minutes of expiry)
+if ($tokenManager->needsRefresh($token)) {
+    $newTokens = $authService->refreshAccessToken($token->refresh_token);
+    $tokenManager->updateToken($token, $newTokens);
+}
+
+// Handle multiple channels
+$tokens = $tokenManager->getUserTokens(auth()->id());
+foreach ($tokens as $token) {
+    echo "Channel: {$token->channel_title}\n";
+}
+```
+
+### Video Management
+
+#### Upload Videos
+
+```php
+use EkstreMedia\LaravelYouTube\Facades\YouTube;
+
+// Simple upload
+$video = YouTube::forUser(auth()->id())->uploadVideo(
+    $request->file('video'),
+    [
+        'title' => 'My Video',
+        'description' => 'Video description',
+        'tags' => ['tag1', 'tag2'],
+        'category_id' => '22', // People & Blogs
+        'privacy_status' => 'private', // private, unlisted, public
+    ]
+);
+
+// Advanced upload with options
+$video = YouTube::forUser(auth()->id())->uploadVideo(
+    '/path/to/large-video.mp4',
+    [
+        'title' => 'Large Video Upload',
+        'description' => 'Testing chunked upload',
+        'tags' => ['large', 'chunked'],
+        'made_for_kids' => false,
+        'embeddable' => true,
+        'license' => 'creativeCommon',
+        'recording_date' => '2024-01-15T10:00:00Z',
+        'default_language' => 'en',
+        'default_audio_language' => 'en',
+    ],
+    [
+        'chunk_size' => 50 * 1024 * 1024, // 50MB chunks
+        'notify_url' => 'https://yourapp.com/webhook',
+        'progress_callback' => function ($uploaded, $total) {
+            $percent = round(($uploaded / $total) * 100);
+            Log::info("Upload progress: {$percent}%");
+        }
+    ]
+);
+
+// Set custom thumbnail
+YouTube::forUser(auth()->id())->setThumbnail(
+    $video->video_id,
+    $request->file('thumbnail')
+);
+```
+
+#### Manage Videos
+
+```php
+// Get user's videos
+$videos = YouTube::forUser(auth()->id())->getVideos([
     'maxResults' => 50,
-    'order' => 'date'
+    'order' => 'date', // date, rating, relevance, title, viewCount
+    'type' => 'video',
+    'videoDefinition' => 'high', // any, high, standard
+    'videoDuration' => 'medium', // short (<4min), medium (4-20min), long (>20min)
 ]);
 
-// Upload a video
-$video = $youtube->uploadVideo($request->file('video'), [
-    'title' => 'My Video Title',
-    'description' => 'Video description',
-    'tags' => ['tag1', 'tag2'],
-    'category_id' => '22',
-    'privacy_status' => 'private'
+// Get single video details
+$video = YouTube::forUser(auth()->id())->getVideo('video-id', [
+    'snippet',
+    'contentDetails',
+    'statistics',
+    'status',
+    'processingDetails'
 ]);
 
 // Update video metadata
-$youtube->updateVideo($videoId, [
-    'title' => 'New Title',
-    'description' => 'New Description',
-    'privacy_status' => 'public'
+$updated = YouTube::forUser(auth()->id())->updateVideo('video-id', [
+    'title' => 'Updated Title',
+    'description' => 'Updated description',
+    'tags' => ['new', 'tags'],
+    'category_id' => '24',
+    'privacy_status' => 'public',
 ]);
 
-// Delete a video
-$youtube->deleteVideo($videoId);
+// Delete video
+YouTube::forUser(auth()->id())->deleteVideo('video-id');
 ```
 
-### OAuth Authentication
+### Playlist Management
 
 ```php
-// In your controller
-public function connectYouTube()
-{
-    return redirect()->route('youtube.auth');
-}
+// Get playlists
+$playlists = YouTube::forUser(auth()->id())->getPlaylists([
+    'maxResults' => 50,
+    'mine' => true,
+]);
 
-// After authentication, tokens are automatically stored
-// The package handles token refresh automatically
+// Create playlist
+$playlist = YouTube::forUser(auth()->id())->createPlaylist([
+    'title' => 'My Playlist',
+    'description' => 'A collection of videos',
+    'privacy_status' => 'public',
+    'tags' => ['playlist', 'collection'],
+]);
+
+// Update playlist
+YouTube::forUser(auth()->id())->updatePlaylist('playlist-id', [
+    'title' => 'Updated Playlist Title',
+    'description' => 'Updated description',
+    'privacy_status' => 'private',
+]);
+
+// Add video to playlist
+YouTube::forUser(auth()->id())->addToPlaylist('playlist-id', 'video-id', [
+    'position' => 0, // Optional: position in playlist
+    'note' => 'Added via API', // Optional: note
+]);
+
+// Remove from playlist
+YouTube::forUser(auth()->id())->removeFromPlaylist('playlist-id', 'playlist-item-id');
+
+// Delete playlist
+YouTube::forUser(auth()->id())->deletePlaylist('playlist-id');
+```
+
+### Channel Management
+
+```php
+// Get channel info
+$channel = YouTube::forUser(auth()->id())->getChannel([
+    'snippet',
+    'contentDetails',
+    'statistics',
+    'brandingSettings',
+    'contentOwnerDetails',
+    'localizations',
+    'status',
+    'topicDetails'
+]);
+
+// Get channel videos
+$videos = YouTube::forUser(auth()->id())->getChannelVideos('channel-id', [
+    'maxResults' => 50,
+    'order' => 'date',
+]);
+
+// Get channel playlists
+$playlists = YouTube::forUser(auth()->id())->getChannelPlaylists('channel-id');
+
+// Switch between multiple channels
+$tokens = YouTubeToken::where('user_id', auth()->id())->get();
+foreach ($tokens as $token) {
+    $youtube = YouTube::withToken($token);
+    $channel = $youtube->getChannel();
+    echo "Channel: {$channel['title']} ({$channel['subscriberCount']} subscribers)\n";
+}
+```
+
+### Background Jobs & Queues
+
+```php
+use EkstreMedia\LaravelYouTube\Jobs\UploadVideoJob;
+
+// Dispatch upload job
+UploadVideoJob::dispatch(
+    userId: auth()->id(),
+    videoPath: '/path/to/video.mp4',
+    metadata: [
+        'title' => 'Queued Upload',
+        'description' => 'Uploaded via queue',
+        'tags' => ['queued', 'background'],
+        'privacy_status' => 'private',
+    ],
+    channelId: 'UC123456', // Optional: specific channel
+    playlistId: 'PLxxxxxx', // Optional: add to playlist
+    thumbnailPath: '/path/to/thumbnail.jpg', // Optional
+    notifyUrl: 'https://yourapp.com/webhook' // Optional: webhook
+)->onQueue('media');
+
+// The job handles:
+// - Automatic retries (3 attempts)
+// - Exponential backoff (1min, 5min, 15min)
+// - Progress tracking
+// - Webhook notifications
+// - Cleanup of temporary files
+// - Error handling and logging
+```
+
+### API Endpoints
+
+The package provides RESTful API endpoints:
+
+#### Video Endpoints
+```
+GET    /api/youtube/videos              - List user's videos
+GET    /api/youtube/videos/{id}         - Get video details
+PUT    /api/youtube/videos/{id}         - Update video
+DELETE /api/youtube/videos/{id}         - Delete video
+POST   /api/youtube/videos/{id}/thumbnail - Set thumbnail
+```
+
+#### Upload Endpoints
+```
+POST   /api/youtube/upload               - Upload video
+GET    /api/youtube/upload/status/{id}   - Get upload status
+```
+
+#### Channel Endpoints
+```
+GET    /api/youtube/channel              - Get channel info
+GET    /api/youtube/channel/videos       - List channel videos
+GET    /api/youtube/channel/playlists    - List channel playlists
+```
+
+#### Playlist Endpoints
+```
+GET    /api/youtube/playlists            - List playlists
+POST   /api/youtube/playlists            - Create playlist
+GET    /api/youtube/playlists/{id}       - Get playlist
+PUT    /api/youtube/playlists/{id}       - Update playlist
+DELETE /api/youtube/playlists/{id}       - Delete playlist
+POST   /api/youtube/playlists/{id}/videos - Add video
+DELETE /api/youtube/playlists/{id}/videos/{videoId} - Remove video
 ```
 
 ### Admin Panel
 
-Access the admin panel at `/youtube-admin` (configurable via `YOUTUBE_ADMIN_PREFIX`).
+Access the admin panel at `/youtube-admin` (configurable):
 
-Features include:
-- Dashboard with statistics and charts
-- Channel management
-- Video listing and management
-- Upload interface with progress tracking
-- Playlist management
+```php
+// In routes/web.php
+Route::middleware(['auth', 'admin'])->group(function () {
+    // Admin panel routes are automatically registered
+    // Configure in config/youtube.php
+});
+```
+
+Features:
 - Token management
+- Video listing and management
+- Upload interface
+- Channel statistics
+- Playlist management
+- Upload history
 
-### Using Service Classes Directly
+### Advanced Features
 
-```php
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
-use EkstreMedia\LaravelYouTube\Services\TokenManager;
-
-class VideoController extends Controller
-{
-    protected $youtube;
-    protected $tokenManager;
-
-    public function __construct(YouTubeService $youtube, TokenManager $tokenManager)
-    {
-        $this->youtube = $youtube;
-        $this->tokenManager = $tokenManager;
-    }
-
-    public function index()
-    {
-        $token = $this->tokenManager->getActiveToken(auth()->id());
-
-        if (!$token) {
-            return redirect()->route('youtube.auth');
-        }
-
-        $videos = $this->youtube
-            ->withToken($token)
-            ->getVideos();
-
-        return view('videos.index', compact('videos'));
-    }
-}
-```
-
-### Handling Uploads
+#### Live Streaming
 
 ```php
-public function upload(Request $request)
-{
-    $request->validate([
-        'video' => 'required|file|mimes:mp4,avi,mov,wmv|max:12800000', // 128GB max
-        'title' => 'required|string|max:100',
-        'description' => 'nullable|string|max:5000',
-        'tags' => 'nullable|array',
-        'privacy' => 'required|in:private,unlisted,public'
-    ]);
+// Create live broadcast
+$broadcast = YouTube::forUser(auth()->id())->createLiveBroadcast([
+    'title' => 'Live Stream',
+    'description' => 'Live streaming event',
+    'scheduled_start_time' => now()->addHour(),
+    'scheduled_end_time' => now()->addHours(2),
+    'privacy_status' => 'public',
+]);
 
-    try {
-        $video = YouTube::forUser(auth()->id())
-            ->uploadVideo(
-                $request->file('video'),
-                [
-                    'title' => $request->input('title'),
-                    'description' => $request->input('description'),
-                    'tags' => $request->input('tags', []),
-                    'privacy_status' => $request->input('privacy'),
-                    'made_for_kids' => false,
-                ],
-                [
-                    'chunk_size' => 5 * 1024 * 1024, // 5MB chunks
-                ]
-            );
+// Create live stream
+$stream = YouTube::forUser(auth()->id())->createLiveStream([
+    'title' => 'Stream',
+    'description' => 'Stream description',
+    'cdn' => [
+        'frameRate' => '30fps',
+        'resolution' => '1080p',
+        'ingestionType' => 'rtmp',
+    ],
+]);
 
-        return response()->json([
-            'success' => true,
-            'video_id' => $video->video_id,
-            'message' => 'Video uploaded successfully!'
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Upload failed: ' . $e->getMessage()
-        ], 500);
-    }
-}
+// Bind stream to broadcast
+YouTube::forUser(auth()->id())->bindBroadcastToStream(
+    $broadcast['id'],
+    $stream['id']
+);
 ```
 
-### Blade Components
+#### Comments Management
 
-The package includes several Blade components:
+```php
+// Get video comments
+$comments = YouTube::forUser(auth()->id())->getVideoComments('video-id', [
+    'maxResults' => 100,
+    'order' => 'time', // time, relevance
+    'textFormat' => 'plainText', // plainText, html
+]);
 
-```blade
-{{-- Upload Form Component --}}
-<x-youtube-upload-form
-    :channel="$channel"
-    :categories="$categories" />
+// Reply to comment
+YouTube::forUser(auth()->id())->replyToComment('comment-id', 'Thank you for watching!');
 
-{{-- Video List Component --}}
-<x-youtube-video-list
-    :videos="$videos"
-    :show-actions="true" />
-
-{{-- Channel Info Component --}}
-<x-youtube-channel-info
-    :channel="$channel"
-    :show-stats="true" />
-
-{{-- Auth Button Component --}}
-<x-youtube-auth-button
-    text="Connect YouTube Channel"
-    class="btn-primary" />
+// Moderate comments
+YouTube::forUser(auth()->id())->setCommentModerationStatus('comment-id', 'published'); // heldForReview, published, rejected
 ```
 
-## Console Commands
+#### Analytics Integration
+
+```php
+// Get video analytics (requires YouTube Analytics API)
+$analytics = YouTube::forUser(auth()->id())->getVideoAnalytics('video-id', [
+    'metrics' => 'views,estimatedMinutesWatched,averageViewDuration',
+    'dimensions' => 'day',
+    'startDate' => now()->subDays(30)->format('Y-m-d'),
+    'endDate' => now()->format('Y-m-d'),
+]);
+```
+
+## 🧪 Testing
+
+The package includes comprehensive test coverage:
+
+```bash
+# Run all tests
+composer test
+
+# Run specific test suite
+vendor/bin/pest --filter="Upload"
+
+# Run with coverage
+composer test-coverage
+```
+
+Test categories:
+- Unit tests for configuration and models
+- Feature tests for services and API endpoints
+- Integration tests for OAuth flow
+- Upload tests including chunked uploads
+- Token management and refresh tests
+- Rate limiting and authentication tests
+
+## 🔧 Configuration
+
+Full configuration options in `config/youtube.php`:
+
+```php
+return [
+    'credentials' => [
+        'client_id' => env('YOUTUBE_CLIENT_ID'),
+        'client_secret' => env('YOUTUBE_CLIENT_SECRET'),
+        'redirect_uri' => env('YOUTUBE_REDIRECT_URI', '/youtube/callback'),
+    ],
+
+    'scopes' => [
+        'https://www.googleapis.com/auth/youtube',
+        'https://www.googleapis.com/auth/youtube.upload',
+        'https://www.googleapis.com/auth/youtube.readonly',
+        'https://www.googleapis.com/auth/youtube.force-ssl',
+        'https://www.googleapis.com/auth/youtubepartner',
+        'https://www.googleapis.com/auth/youtubepartner-channel-audit',
+    ],
+
+    'admin' => [
+        'enabled' => env('YOUTUBE_ADMIN_ENABLED', true),
+        'prefix' => env('YOUTUBE_ADMIN_PREFIX', 'youtube-admin'),
+        'middleware' => ['web'],
+        'auth_middleware' => ['auth'],
+    ],
+
+    'routes' => [
+        'api' => [
+            'enabled' => env('YOUTUBE_API_ENABLED', true),
+            'prefix' => env('YOUTUBE_API_PREFIX', 'youtube'),
+            'middleware' => ['api'],
+            'api_middleware' => ['auth:sanctum', 'throttle:60,1'],
+        ],
+    ],
+
+    'token' => [
+        'driver' => 'database',
+        'table' => 'youtube_tokens',
+        'cache_key' => 'youtube.token.',
+        'cache_ttl' => env('YOUTUBE_TOKEN_CACHE_TTL', 3600),
+    ],
+
+    'upload' => [
+        'chunk_size' => env('YOUTUBE_UPLOAD_CHUNK_SIZE', 1024 * 1024), // 1MB
+        'timeout' => env('YOUTUBE_UPLOAD_TIMEOUT', 3600),
+        'max_file_size' => env('YOUTUBE_UPLOAD_MAX_SIZE', 128 * 1024 * 1024 * 1024), // 128GB
+        'temp_path' => env('YOUTUBE_UPLOAD_TEMP_PATH', storage_path('app/youtube-uploads')),
+    ],
+
+    'defaults' => [
+        'privacy_status' => env('YOUTUBE_DEFAULT_PRIVACY', 'private'),
+        'category_id' => env('YOUTUBE_DEFAULT_CATEGORY', '22'),
+        'language' => env('YOUTUBE_DEFAULT_LANGUAGE', 'en'),
+    ],
+
+    'rate_limiting' => [
+        'enabled' => env('YOUTUBE_RATE_LIMIT_ENABLED', true),
+        'max_requests_per_minute' => env('YOUTUBE_RATE_LIMIT_PER_MINUTE', 60),
+        'max_requests_per_hour' => env('YOUTUBE_RATE_LIMIT_PER_HOUR', 3000),
+    ],
+
+    'logging' => [
+        'enabled' => env('YOUTUBE_LOGGING_ENABLED', true),
+        'channel' => env('YOUTUBE_LOGGING_CHANNEL', 'youtube'),
+        'level' => env('YOUTUBE_LOGGING_LEVEL', 'info'),
+    ],
+];
+```
+
+## 🛠️ Console Commands
 
 ```bash
 # Refresh expiring tokens
 php artisan youtube:refresh-tokens
-
-# Refresh specific token
 php artisan youtube:refresh-tokens --token-id=1
+php artisan youtube:refresh-tokens --user-id=1 --force
 
-# Refresh all tokens for a user
-php artisan youtube:refresh-tokens --user-id=1
-
-# Clear expired tokens
+# Clean up expired tokens
 php artisan youtube:clear-expired-tokens
+php artisan youtube:clear-expired-tokens --days=30 --dry-run
 
-# Clear tokens older than 60 days
-php artisan youtube:clear-expired-tokens --days=60
-
-# Dry run (see what would be deleted)
-php artisan youtube:clear-expired-tokens --dry-run
+# Sync video statistics
+php artisan youtube:sync-videos
+php artisan youtube:sync-videos --user-id=1
+php artisan youtube:sync-videos --video-id=abc123
 ```
 
-## Scheduled Tasks
+## 🔄 Scheduled Tasks
 
 Add to your `app/Console/Kernel.php`:
 
@@ -283,145 +655,116 @@ protected function schedule(Schedule $schedule)
     // Automatically refresh expiring tokens
     $schedule->command('youtube:refresh-tokens')->hourly();
 
-    // Clean up expired tokens
+    // Clean up expired tokens daily
     $schedule->command('youtube:clear-expired-tokens')->daily();
+
+    // Sync video statistics every 6 hours
+    $schedule->command('youtube:sync-videos')->everySixHours();
 }
 ```
 
-## API Endpoints
+## 🚨 Error Handling
 
-The package provides RESTful API endpoints:
-
-```
-GET    /api/youtube/channel           - Get channel information
-GET    /api/youtube/videos            - List videos
-GET    /api/youtube/videos/{id}       - Get video details
-PUT    /api/youtube/videos/{id}       - Update video
-DELETE /api/youtube/videos/{id}       - Delete video
-POST   /api/youtube/upload            - Upload video
-GET    /api/youtube/playlists         - List playlists
-POST   /api/youtube/playlists         - Create playlist
-```
-
-## Error Handling
-
-The package provides custom exceptions:
+The package provides specific exception types:
 
 ```php
-use EkstreMedia\LaravelYouTube\Exceptions\YouTubeException;
-use EkstreMedia\LaravelYouTube\Exceptions\YouTubeAuthException;
-use EkstreMedia\LaravelYouTube\Exceptions\UploadException;
-use EkstreMedia\LaravelYouTube\Exceptions\QuotaExceededException;
+use EkstreMedia\LaravelYouTube\Exceptions\{
+    YouTubeException,
+    YouTubeAuthException,
+    UploadException,
+    TokenException,
+    QuotaExceededException
+};
 
 try {
     $video = YouTube::forUser($userId)->uploadVideo($file, $metadata);
 } catch (QuotaExceededException $e) {
     // Handle quota exceeded
-    Log::error('YouTube quota exceeded: ' . $e->getMessage());
+    Log::error("YouTube quota exceeded: " . $e->getMessage());
+    // Retry after reset
 } catch (UploadException $e) {
-    // Handle upload errors
-    Log::error('Upload failed: ' . $e->getMessage());
+    // Handle upload failure
+    Log::error("Upload failed: " . $e->getMessage());
+} catch (TokenException $e) {
+    // Handle token issues
+    return redirect()->route('youtube.auth');
 } catch (YouTubeException $e) {
     // Handle general YouTube API errors
-    Log::error('YouTube API error: ' . $e->getMessage());
+    Log::error("YouTube API error: " . $e->getYouTubeError());
 }
 ```
 
-## Configuration
+## 🔐 Security
 
-See `config/youtube.php` for all available configuration options:
+- OAuth tokens are encrypted using Laravel's encryption
+- CSRF protection on OAuth flow
+- Rate limiting on API endpoints
+- Scoped access control
+- Automatic token rotation
+- Secure webhook signatures
 
-- OAuth2 credentials
-- API scopes
-- Admin panel settings
-- Upload settings (chunk size, temp path, max file size)
-- Default privacy settings
-- Rate limiting
-- Logging
+## 📊 Events
 
-## Testing
+The package dispatches Laravel events:
 
-Run the test suite with Pest:
+```php
+// Listen for events in EventServiceProvider
+protected $listen = [
+    \EkstreMedia\LaravelYouTube\Events\VideoUploaded::class => [
+        \App\Listeners\ProcessUploadedVideo::class,
+    ],
+    \EkstreMedia\LaravelYouTube\Events\TokenRefreshed::class => [
+        \App\Listeners\LogTokenRefresh::class,
+    ],
+    \EkstreMedia\LaravelYouTube\Events\UploadFailed::class => [
+        \App\Listeners\NotifyUploadFailure::class,
+    ],
+];
+```
+
+## 🤝 Contributing
+
+Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
+
+## 🧪 Testing
 
 ```bash
 composer test
-
-# With coverage
 composer test-coverage
+composer format
+composer analyse
 ```
 
-## Security
+## 📝 Changelog
 
-- All tokens are encrypted before storage
-- CSRF protection on all forms
-- Rate limiting on API endpoints
-- Automatic token refresh prevents unauthorized access
-- Secure OAuth2 flow with state parameter
+Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
 
-## Customization
+## 🔒 Security
 
-### Custom Views
+If you discover any security-related issues, please email security@ekstremedia.no instead of using the issue tracker.
 
-Publish and modify views:
+## 📜 License
 
-```bash
-php artisan vendor:publish --tag=youtube-views
-```
+The MIT License (MIT). Please see [License File](LICENSE) for more information.
 
-Views are published to `resources/views/vendor/youtube/`.
+## 👥 Credits
 
-### Extending Services
+- [Terje Nesthus](https://github.com/terjenesthus)
+- [All Contributors](../../contributors)
 
-```php
-namespace App\Services;
+## 🙏 Acknowledgments
 
-use EkstreMedia\LaravelYouTube\Services\YouTubeService;
+- Thanks to Google for the YouTube Data API
+- Laravel framework for the excellent foundation
+- The open-source community for inspiration
 
-class CustomYouTubeService extends YouTubeService
-{
-    public function customMethod()
-    {
-        // Your custom logic
-    }
-}
-```
+## 📞 Support
 
-Register in a service provider:
+- 📧 Email: support@ekstremedia.no
+- 🐛 Issues: [GitHub Issues](https://github.com/ekstremedia/laravel-youtube/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/ekstremedia/laravel-youtube/discussions)
+- 📖 Documentation: [Full Docs](https://ekstremedia.github.io/laravel-youtube)
 
-```php
-$this->app->bind(YouTubeService::class, CustomYouTubeService::class);
-```
+---
 
-## Troubleshooting
-
-### Common Issues
-
-1. **"No refresh token received"**
-   - Ensure you're using `access_type=offline` and `approval_prompt=force`
-   - User may need to revoke access and re-authenticate
-
-2. **"Quota exceeded"**
-   - YouTube API has daily quotas
-   - Enable rate limiting in configuration
-   - Consider caching responses
-
-3. **"Token expired"**
-   - Run `php artisan youtube:refresh-tokens`
-   - Check scheduled tasks are running
-
-## Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
-## License
-
-The MIT License (MIT). See [LICENSE](LICENSE) for more information.
-
-## Credits
-
-- [Terje Nesthus](https://github.com/terje)
-- Built with inspiration from abandoned packages, modernized for Laravel 12+
-
-## Support
-
-For issues, questions, or suggestions, please [open an issue](https://github.com/ekstremedia/laravel-youtube/issues) on GitHub.
+Made with ❤️ by [Ekstre Media](https://ekstremedia.no)

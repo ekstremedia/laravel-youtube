@@ -11,23 +11,6 @@ use Illuminate\Support\Facades\Config;
 
 uses(RefreshDatabase::class);
 
-// Helper function to create a test user
-function createTestUser()
-{
-    $user = new class extends \Illuminate\Foundation\Auth\User
-    {
-        protected $table = 'users';
-
-        protected $fillable = ['name', 'email', 'password'];
-    };
-    $user->name = 'Test User ' . rand(1000, 9999);
-    $user->email = 'test' . rand(1000, 9999) . '@example.com';
-    $user->password = bcrypt('password');
-    $user->save();
-
-    return $user;
-}
-
 beforeEach(function () {
     Config::set('youtube.credentials.client_id', 'test-client-id');
     Config::set('youtube.credentials.client_secret', 'test-client-secret');
@@ -53,7 +36,7 @@ describe('YouTube Service', function () {
     });
 
     it('can set user context', function () {
-        $user = createTestUser();
+        $user = $this->createTestUser();
 
         $token = YouTubeToken::factory()->create([
             'user_id' => $user->id,
@@ -71,7 +54,7 @@ describe('YouTube Service', function () {
 describe('Token Manager', function () {
     it('can store tokens', function () {
         $tokenManager = app(TokenManager::class);
-        $user = createTestUser();
+        $user = $this->createTestUser();
 
         $tokenData = [
             'access_token' => 'test-access-token',
@@ -97,7 +80,7 @@ describe('Token Manager', function () {
     });
 
     it('can retrieve active tokens', function () {
-        $user = createTestUser();
+        $user = $this->createTestUser();
         $token = YouTubeToken::factory()->create([
             'user_id' => $user->id,
             'is_active' => true,
@@ -166,7 +149,7 @@ describe('Auth Service', function () {
 
 describe('YouTube Video Model', function () {
     it('has correct relationships', function () {
-        $user = createTestUser();
+        $user = $this->createTestUser();
         $token = YouTubeToken::factory()->create(['user_id' => $user->id]);
         $video = YouTubeVideo::factory()->create([
             'user_id' => $user->id,
@@ -274,7 +257,7 @@ describe('YouTube Token Model', function () {
     });
 
     it('scopes work correctly', function () {
-        $user = createTestUser();
+        $user = $this->createTestUser();
 
         // Create various tokens
         YouTubeToken::factory()->create([

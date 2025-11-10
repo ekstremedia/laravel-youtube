@@ -213,6 +213,28 @@ class YouTubeToken extends Model
     }
 
     /**
+     * Check if token has a specific scope.
+     *
+     * @param  string  $scope  The scope to check for (can be partial, e.g., 'youtube.upload')
+     * @return bool
+     */
+    public function hasScope(string $scope): bool
+    {
+        if (!$this->scopes || !is_array($this->scopes)) {
+            return false;
+        }
+
+        foreach ($this->scopes as $tokenScope) {
+            // Check if the scope matches or contains the requested scope
+            if (str_contains($tokenScope, $scope) || str_contains($tokenScope, "auth/{$scope}")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Mark token as refreshed.
      */
     public function markAsRefreshed(): void

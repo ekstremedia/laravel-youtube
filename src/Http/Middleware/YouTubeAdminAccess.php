@@ -24,12 +24,15 @@ class YouTubeAdminAccess
             abort(401, 'Authentication required');
         }
 
+        // Get user ID safely
+        $userId = property_exists($user, 'id') ? $user->id : null;
+
         // Check for required role
         $requiredRole = config('youtube.security.admin_role');
         if ($requiredRole && method_exists($user, 'hasRole')) {
             if (! $user->hasRole($requiredRole)) {
                 logger()->warning('YouTube admin access denied: Missing role', [
-                    'user_id' => $user->id,
+                    'user_id' => $userId,
                     'required_role' => $requiredRole,
                 ]);
 
@@ -42,7 +45,7 @@ class YouTubeAdminAccess
         if ($requiredPermission && method_exists($user, 'can')) {
             if (! $user->can($requiredPermission)) {
                 logger()->warning('YouTube admin access denied: Missing permission', [
-                    'user_id' => $user->id,
+                    'user_id' => $userId,
                     'required_permission' => $requiredPermission,
                 ]);
 
@@ -54,7 +57,7 @@ class YouTubeAdminAccess
         if (config('youtube.security.require_verified_email', false)) {
             if (method_exists($user, 'hasVerifiedEmail') && ! $user->hasVerifiedEmail()) {
                 logger()->warning('YouTube admin access denied: Email not verified', [
-                    'user_id' => $user->id,
+                    'user_id' => $userId,
                 ]);
 
                 abort(403, 'Email verification required');

@@ -23,7 +23,8 @@ class YouTubeRateLimit
             return $next($request);
         }
 
-        $userId = $request->user()?->id ?? $request->ip();
+        $user = $request->user();
+        $userId = $user ? $user->id : $request->ip();
         $key = 'youtube_rate_limit:' . $userId;
 
         // Check per-minute limit
@@ -41,7 +42,7 @@ class YouTubeRateLimit
             return response()->json([
                 'message' => 'Too many requests. Please slow down.',
                 'retry_after' => $seconds,
-            ], 429)->header('Retry-After', $seconds);
+            ], 429)->header('Retry-After', (string) $seconds);
         }
 
         RateLimiter::hit($perMinuteKey, 60); // 1 minute window
@@ -61,7 +62,7 @@ class YouTubeRateLimit
             return response()->json([
                 'message' => 'Hourly rate limit exceeded. Please try again later.',
                 'retry_after' => $seconds,
-            ], 429)->header('Retry-After', $seconds);
+            ], 429)->header('Retry-After', (string) $seconds);
         }
 
         RateLimiter::hit($perHourKey, 3600); // 1 hour window

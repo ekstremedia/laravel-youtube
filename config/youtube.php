@@ -54,21 +54,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | API Routes Settings
+    | Routes Settings
     |--------------------------------------------------------------------------
     |
-    | Configuration for the API routes that handle OAuth authentication
-    | and provide endpoints for YouTube operations.
+    | Configuration for the routes that handle OAuth authentication.
+    |
+    | auth_page.middleware: Protect the authorization page and OAuth routes
+    |   - Default: ['web', 'auth'] - Requires user to be logged in
+    |   - You can customize this to use your own auth guards or permissions
+    |   - Example: ['web', 'auth:admin'] or ['web', 'can:manage-youtube']
     |
     */
     'routes' => [
         'enabled' => env('YOUTUBE_ROUTES_ENABLED', true),
         'prefix' => env('YOUTUBE_ROUTES_PREFIX', 'youtube'),
         'middleware' => ['web'],
-        'api_middleware' => ['api', 'throttle:60,1'],
         'auth_page' => [
             'enabled' => env('YOUTUBE_AUTH_PAGE_ENABLED', true),
             'path' => env('YOUTUBE_AUTH_PAGE_PATH', 'youtube-authorize'),
+            'middleware' => ['web', 'auth'], // Requires authentication by default
         ],
     ],
 

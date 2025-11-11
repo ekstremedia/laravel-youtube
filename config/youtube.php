@@ -68,8 +68,7 @@ return [
         'api_middleware' => ['api', 'throttle:60,1'],
         'auth_page' => [
             'enabled' => env('YOUTUBE_AUTH_PAGE_ENABLED', true),
-            'path' => env('YOUTUBE_AUTH_PAGE_PATH', 'youtube-authenticate'),
-            'middleware' => ['web', 'auth'], // Require authentication
+            'path' => env('YOUTUBE_AUTH_PAGE_PATH', 'youtube-authorize'),
         ],
     ],
 

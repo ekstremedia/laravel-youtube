@@ -386,22 +386,17 @@ describe('Upload for Raspberry Pi Integration', function () {
             'tags' => ['raspberry-pi', 'timelapse', 'automated'],
             'category_id' => '28', // Science & Technology
             'privacy_status' => 'unlisted',
-            'playlist_id' => 'PLxxxxxx', // Add to specific playlist
         ];
 
-        // Mock upload and playlist addition
+        // Mock upload
         $mockVideo = new Video;
         $mockVideo->setId('pi-video-2024-01-15');
 
         $videosServiceMock = Mockery::mock(YouTube\Resource\Videos::class);
         $videosServiceMock->shouldReceive('insert')->once()->andReturn($mockVideo);
 
-        $playlistItemsServiceMock = Mockery::mock(YouTube\Resource\PlaylistItems::class);
-        $playlistItemsServiceMock->shouldReceive('insert')->once()->andReturn(true);
-
         $youtubeMock = Mockery::mock(YouTube::class);
         $youtubeMock->videos = $videosServiceMock;
-        $youtubeMock->playlistItems = $playlistItemsServiceMock;
 
         app()->bind(YouTube::class, fn () => $youtubeMock);
 
@@ -409,11 +404,6 @@ describe('Upload for Raspberry Pi Integration', function () {
 
         // Upload video
         $video = $service->forUser($user->id)->uploadVideo($piVideoPath, $metadata);
-
-        // Add to playlist if specified
-        if (isset($metadata['playlist_id'])) {
-            $service->addToPlaylist($metadata['playlist_id'], $video->video_id);
-        }
 
         expect($video)->toBeInstanceOf(YouTubeVideo::class)
             ->and($video->video_id)->toBe('pi-video-2024-01-15')

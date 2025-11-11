@@ -1,24 +1,38 @@
-# API Reference
+# Service API Reference
 
 ## Table of Contents
 - [Authentication](#authentication)
+- [YouTube Facade Methods](#youtube-facade-methods)
 - [Video Operations](#video-operations)
-- [Upload Operations](#upload-operations)
 - [Channel Operations](#channel-operations)
 - [Token Management](#token-management)
-- [Admin Panel](#admin-panel)
-- [Queue Jobs](#queue-jobs)
 - [Events](#events)
 - [Exceptions](#exceptions)
 
 ## Authentication
+
+The package provides a simple authorization page and OAuth routes for connecting YouTube channels.
+
+### GET /{auth_page_path}
+Authorization page (default: `/youtube-authorize`)
+
+Shows the current connection status and provides an authorization button. The page:
+- Checks if Google OAuth credentials are configured
+- Displays connected channel information (if any)
+- Provides an "Authorize" button to initiate OAuth flow
+- Shows token expiration status
+- Automatically refreshes expired tokens
+
+**Configuration:**
+```env
+YOUTUBE_AUTH_PAGE_PATH=youtube-authorize
+```
 
 ### GET /youtube/auth
 Initiates OAuth flow by redirecting to Google.
 
 **Query Parameters:**
 - `return_url` (optional): URL to return to after authentication
-- `channel_id` (optional): Pre-select specific channel
 
 **Response:**
 - 302 Redirect to Google OAuth
@@ -31,315 +45,146 @@ Handles OAuth callback from Google.
 - `state`: CSRF protection state
 
 **Response:**
-- 302 Redirect to return_url or dashboard
+- 302 Redirect to authorization page with success/error message
 - 403 if state mismatch
 
 ### POST /youtube/revoke
-Revokes the current user's YouTube access.
-
-**Headers:**
-- `Authorization: Bearer {token}`
+Revokes the current YouTube access token.
 
 **Response:**
-```json
-{
-  "message": "Token revoked successfully"
-}
-```
+- 302 Redirect to authorization page with success message
 
-### GET /youtube/status
-Check current authentication status.
+## YouTube Facade Methods
 
-**Headers:**
-- `Authorization: Bearer {token}`
+The package provides a fluent API through the `YouTube` facade. All video and channel operations are performed through the service.
 
-**Response:**
-```json
-{
-  "authenticated": true,
-  "channels": [
-    {
-      "channel_id": "UC123456",
-      "channel_title": "My Channel",
-      "is_active": true,
-      "expires_at": "2024-12-31T23:59:59Z"
-    }
-  ]
-}
+### Setting Context
+
+```php
+use EkstreMedia\LaravelYouTube\Facades\YouTube;
+
+// Use default (most recent) active token
+YouTube::usingDefault();
+
+// Use token for specific channel
+YouTube::forChannel('UCxxxxxxxxxx');
+
+// Use token for specific user (legacy/multi-user support)
+YouTube::forUser($userId, $channelId = null);
+
+// Use specific token instance
+YouTube::withToken($token);
 ```
 
 ## Video Operations
 
-### GET /api/youtube/videos
-List user's YouTube videos.
+All video operations are performed through the YouTube service facade.
 
-**Headers:**
-- `Authorization: Bearer {token}`
+### Upload Video
 
-**Query Parameters:**
-- `page` (integer): Page number (default: 1)
-- `per_page` (integer): Items per page (default: 20, max: 50)
-- `channel_id` (string): Filter by channel
-- `privacy_status` (string): Filter by privacy (public, private, unlisted)
-- `search` (string): Search in title/description
-- `order` (string): Sort order (date, rating, relevance, title, viewCount)
+```php
+use EkstreMedia\LaravelYouTube\Facades\YouTube;
 
-**Response:**
-```json
-{
-  "data": [
-    {
-      "id": 1,
-      "video_id": "dQw4w9WgXcQ",
-      "title": "Video Title",
-      "description": "Video description",
-      "privacy_status": "public",
-      "view_count": 1000000,
-      "like_count": 50000,
-      "comment_count": 5000,
-      "duration": "PT3M45S",
-      "thumbnail": "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
-      "watch_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-      "embed_url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
-      "published_at": "2024-01-15T10:00:00Z",
-      "created_at": "2024-01-15T10:00:00Z"
-    }
-  ],
-  "meta": {
-    "current_page": 1,
-    "from": 1,
-    "last_page": 5,
-    "per_page": 20,
-    "to": 20,
-    "total": 100
-  },
-  "links": {
-    "first": "/api/youtube/videos?page=1",
-    "last": "/api/youtube/videos?page=5",
-    "prev": null,
-    "next": "/api/youtube/videos?page=2"
-  }
+$video = YouTube::usingDefault()->uploadVideo(
+    $file, // File path, UploadedFile, or resource
+    [
+        'title' => 'Video Title',
+        'description' => 'Video description',
+        'tags' => ['tag1', 'tag2'],
+        'category_id' => '22',
+        'privacy_status' => 'private', // private, unlisted, public
+        'made_for_kids' => false,
+        'embeddable' => true,
+        'license' => 'youtube', // youtube or creativeCommon
+    ],
+    [
+        'chunk_size' => 10 * 1024 * 1024, // Optional: 10MB chunks
+        'progress_callback' => function ($uploaded, $total) {
+            // Track upload progress
+        }
+    ]
+);
+
+// Returns YouTubeVideo model
+echo $video->video_id; // YouTube video ID
+echo $video->watch_url; // https://www.youtube.com/watch?v=...
+```
+
+### Get Videos
+
+```php
+// Get videos from channel
+$videos = YouTube::usingDefault()->getVideos([
+    'maxResults' => 50,
+    'order' => 'date', // date, rating, relevance, title, viewCount
+]);
+
+// Videos are stored in database as YouTubeVideo models
+foreach ($videos as $video) {
+    echo "{$video->title} - {$video->view_count} views\n";
 }
 ```
 
-### GET /api/youtube/videos/{video_id}
-Get details of a specific video.
+### Get Single Video
 
-**Headers:**
-- `Authorization: Bearer {token}`
+```php
+$video = YouTube::usingDefault()->getVideo('dQw4w9WgXcQ', [
+    'snippet',
+    'contentDetails',
+    'statistics',
+    'status',
+]);
 
-**Response:**
-```json
-{
-  "data": {
-    "id": 1,
-    "video_id": "dQw4w9WgXcQ",
-    "channel_id": "UC123456",
-    "title": "Video Title",
-    "description": "Full video description",
-    "tags": ["tag1", "tag2", "tag3"],
-    "category_id": "22",
-    "privacy_status": "public",
-    "license": "youtube",
-    "embeddable": true,
-    "made_for_kids": false,
-    "default_language": "en",
-    "default_audio_language": "en",
-    "duration": "PT3M45S",
-    "definition": "hd",
-    "caption": "false",
-    "thumbnails": {
-      "default": "https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg",
-      "medium": "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg",
-      "high": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
-      "standard": "https://i.ytimg.com/vi/dQw4w9WgXcQ/sddefault.jpg",
-      "maxres": "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg"
-    },
-    "statistics": {
-      "view_count": 1000000,
-      "like_count": 50000,
-      "dislike_count": 500,
-      "comment_count": 5000
-    },
-    "upload_status": "processed",
-    "processing_status": "succeeded",
-    "published_at": "2024-01-15T10:00:00Z",
-    "created_at": "2024-01-15T10:00:00Z",
-    "updated_at": "2024-01-15T10:00:00Z"
-  }
-}
+// Returns YouTubeVideo model with full details
+echo $video->title;
+echo $video->view_count;
+echo $video->duration;
 ```
 
-### PUT /api/youtube/videos/{video_id}
-Update video metadata.
+### Update Video
 
-**Headers:**
-- `Authorization: Bearer {token}`
-- `Content-Type: application/json`
-
-**Request Body:**
-```json
-{
-  "title": "Updated Title",
-  "description": "Updated description",
-  "tags": ["new", "tags"],
-  "category_id": "24",
-  "privacy_status": "unlisted",
-  "embeddable": true,
-  "license": "creativeCommon",
-  "made_for_kids": false
-}
+```php
+$updated = YouTube::usingDefault()->updateVideo('video-id', [
+    'title' => 'Updated Title',
+    'description' => 'Updated description',
+    'tags' => ['new', 'tags'],
+    'category_id' => '24',
+    'privacy_status' => 'public',
+]);
 ```
 
-**Response:**
-```json
-{
-  "message": "Video updated successfully",
-  "data": {
-    "video_id": "dQw4w9WgXcQ",
-    "title": "Updated Title"
-  }
-}
+### Delete Video
+
+```php
+YouTube::usingDefault()->deleteVideo('video-id');
 ```
 
-### DELETE /api/youtube/videos/{video_id}
-Delete a video from YouTube.
+### Set Thumbnail
 
-**Headers:**
-- `Authorization: Bearer {token}`
-
-**Response:**
-```json
-{
-  "message": "Video deleted successfully"
-}
+```php
+YouTube::usingDefault()->setThumbnail(
+    'video-id',
+    $thumbnailFile // File path, UploadedFile, or resource
+);
 ```
-
-### POST /api/youtube/videos/{video_id}/thumbnail
-Set custom thumbnail for a video.
-
-**Headers:**
-- `Authorization: Bearer {token}`
-- `Content-Type: multipart/form-data`
-
-**Request Body:**
-- `thumbnail` (file): Image file (JPEG/PNG, max 2MB, min 1280x720)
-
-**Response:**
-```json
-{
-  "message": "Thumbnail updated successfully",
-  "thumbnail_url": "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg"
-}
-```
-
-## Upload Operations
-
-### POST /api/youtube/upload
-Upload a new video to YouTube.
-
-**Headers:**
-- `Authorization: Bearer {token}`
-- `Content-Type: multipart/form-data`
-
-**Request Body:**
-- `video` (file, required): Video file (mp4, avi, mov, wmv, flv, webm)
-- `title` (string, required): Video title (max 100 chars)
-- `description` (string): Video description (max 5000 chars)
-- `tags` (array): Video tags
-- `category_id` (string): YouTube category ID
-- `privacy_status` (string): private, unlisted, or public
-- `thumbnail` (file): Custom thumbnail
-- `made_for_kids` (boolean): Kids content flag
-- `embeddable` (boolean): Allow embedding
-- `license` (string): youtube or creativeCommon
-- `notify_url` (string): Webhook URL for completion
-
-**Response:**
-```json
-{
-  "message": "Upload started",
-  "upload_id": "upload-abc123",
-  "status_url": "/api/youtube/upload/status/upload-abc123"
-}
-```
-
-### GET /api/youtube/upload/status/{upload_id}
-Get upload progress status.
-
-**Headers:**
-- `Authorization: Bearer {token}`
-
-**Response:**
-```json
-{
-  "upload_id": "upload-abc123",
-  "status": "processing",
-  "progress": 45,
-  "bytes_uploaded": 47185920,
-  "total_bytes": 104857600,
-  "video_id": null,
-  "message": "Uploading..."
-}
-```
-
-Status values:
-- `pending`: Upload queued
-- `processing`: Upload in progress
-- `completed`: Upload successful
-- `failed`: Upload failed
 
 ## Channel Operations
 
-### GET /api/youtube/channel
-Get authenticated user's channel information.
+### Get Channel Information
 
-**Headers:**
-- `Authorization: Bearer {token}`
+```php
+$channel = YouTube::usingDefault()->getChannel([
+    'snippet',
+    'contentDetails',
+    'statistics',
+    'brandingSettings',
+]);
 
-**Query Parameters:**
-- `channel_id` (string): Specific channel if user has multiple
-
-**Response:**
-```json
-{
-  "data": {
-    "id": "UC123456",
-    "title": "My Channel",
-    "handle": "@mychannel",
-    "description": "Channel description",
-    "thumbnail": "https://yt3.ggpht.com/xxx",
-    "banner": "https://yt3.ggpht.com/xxx",
-    "country": "US",
-    "published_at": "2020-01-15T10:00:00Z",
-    "statistics": {
-      "view_count": "10000000",
-      "subscriber_count": "100000",
-      "video_count": "500"
-    },
-    "branding": {
-      "keywords": "channel keywords",
-      "unsubscribed_trailer": "dQw4w9WgXcQ",
-      "featured_channels": ["UCxxxxxx", "UCyyyyyy"]
-    }
-  }
-}
+// Returns array with channel data
+echo $channel['title'];
+echo $channel['subscriberCount'];
+echo $channel['videoCount'];
 ```
-
-### GET /api/youtube/channel/videos
-List videos from the authenticated channel.
-
-**Headers:**
-- `Authorization: Bearer {token}`
-
-**Query Parameters:**
-- `page` (integer): Page number
-- `per_page` (integer): Items per page
-- `order` (string): Sort order
-- `search` (string): Search query
-
-**Response:**
-Same as `/api/youtube/videos`
 
 ## Token Management
 
@@ -413,82 +258,6 @@ $manager->deactivateToken($token);
 
 // Clean up old tokens
 $deleted = $manager->deleteExpiredTokens(30); // days
-```
-
-## Admin Panel
-
-### Routes
-
-All admin routes are prefixed with `/youtube-admin` (configurable).
-
-```
-GET  /youtube-admin                     - Dashboard
-GET  /youtube-admin/tokens               - Token management
-GET  /youtube-admin/videos               - Video listing
-GET  /youtube-admin/videos/{id}          - Video details
-GET  /youtube-admin/upload               - Upload interface
-POST /youtube-admin/upload               - Process upload
-GET  /youtube-admin/channels             - Channel overview
-POST /youtube-admin/channels/sync        - Sync channel data
-```
-
-### Middleware
-
-Admin panel uses these middleware by default:
-- `web`
-- `auth`
-- Custom middleware can be added in config
-
-```php
-// config/youtube.php
-'admin' => [
-    'enabled' => true,
-    'prefix' => 'youtube-admin',
-    'middleware' => ['web'],
-    'auth_middleware' => ['auth', 'admin'],
-],
-```
-
-## Queue Jobs
-
-### UploadVideoJob
-
-```php
-use EkstreMedia\LaravelYouTube\Jobs\UploadVideoJob;
-
-UploadVideoJob::dispatch(
-    userId: 1,
-    videoPath: '/path/to/video.mp4',
-    metadata: [
-        'title' => 'Video Title',
-        'description' => 'Description',
-        'tags' => ['tag1', 'tag2'],
-        'privacy_status' => 'private',
-        'category_id' => '22',
-    ],
-    channelId: 'UC123456',
-    thumbnailPath: '/path/to/thumb.jpg',
-    notifyUrl: 'https://example.com/webhook'
-)->onQueue('media');
-```
-
-Job properties:
-- `$tries = 3` - Retry attempts
-- `$timeout = 7200` - 2 hour timeout
-- `$maxExceptions = 3` - Max unhandled exceptions
-- Exponential backoff: 1min, 5min, 15min
-
-### RefreshTokensJob
-
-Automatically scheduled hourly to refresh expiring tokens.
-
-```php
-use EkstreMedia\LaravelYouTube\Jobs\RefreshTokensJob;
-
-RefreshTokensJob::dispatch();
-
-// Or refresh specific user's tokens
-RefreshTokensJob::dispatch($userId);
 ```
 
 ## Events
@@ -668,77 +437,7 @@ try {
 ],
 ```
 
-### Custom Rate Limits
-
-```php
-// In RouteServiceProvider
-RateLimiter::for('youtube-api', function (Request $request) {
-    return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
-});
-
-// Apply to routes
-Route::middleware(['throttle:youtube-api'])->group(function () {
-    // YouTube API routes
-});
-```
-
-## Helper Functions
-
-### YouTube Facade Methods
-
-```php
-use EkstreMedia\LaravelYouTube\Facades\YouTube;
-
-// Set user context
-YouTube::forUser($userId, $channelId = null);
-
-// Use specific token
-YouTube::withToken(YouTubeToken $token);
-
-// Get auth URL
-YouTube::getAuthUrl($state = null);
-
-// Video operations
-YouTube::uploadVideo($video, array $metadata, array $options = []);
-YouTube::getVideos(array $options = []);
-YouTube::getVideo($videoId, array $parts = []);
-YouTube::updateVideo($videoId, array $metadata);
-YouTube::deleteVideo($videoId);
-YouTube::setThumbnail($videoId, $thumbnail);
-
-// Channel operations
-YouTube::getChannel(array $parts = []);
-YouTube::getChannelVideos($channelId, array $options = []);
-```
-
-## Validation Rules
-
-### Custom Validation Rules
-
-```php
-use EkstreMedia\LaravelYouTube\Rules\YouTubeVideoId;
-use EkstreMedia\LaravelYouTube\Rules\YouTubeChannelId;
-
-$request->validate([
-    'video_id' => ['required', new YouTubeVideoId()],
-    'channel_id' => ['required', new YouTubeChannelId()],
-]);
-```
-
-### Upload Validation
-
-```php
-$request->validate([
-    'video' => 'required|file|mimes:mp4,avi,mov,wmv,flv,webm|max:137438953472',
-    'title' => 'required|string|max:100',
-    'description' => 'nullable|string|max:5000',
-    'tags' => 'nullable|array|max:500',
-    'tags.*' => 'string|max:30',
-    'category_id' => 'nullable|in:1,2,10,15,17,19,20,21,22,23,24,25,26,27,28',
-    'privacy_status' => 'nullable|in:private,unlisted,public',
-    'thumbnail' => 'nullable|image|mimes:jpeg,jpg,png|max:2048|dimensions:min_width=1280,min_height=720',
-]);
-```
+The YouTube service respects these rate limits when making API calls.
 
 ## Configuration Reference
 
@@ -763,21 +462,11 @@ return [
         'https://www.googleapis.com/auth/youtubepartner-channel-audit',
     ],
 
-    // Admin panel settings
-    'admin' => [
-        'enabled' => env('YOUTUBE_ADMIN_ENABLED', true),
-        'prefix' => env('YOUTUBE_ADMIN_PREFIX', 'youtube-admin'),
-        'middleware' => ['web'],
-        'auth_middleware' => ['auth'],
-    ],
-
-    // API routes settings
+    // Routes settings
     'routes' => [
-        'api' => [
-            'enabled' => env('YOUTUBE_API_ENABLED', true),
-            'prefix' => env('YOUTUBE_API_PREFIX', 'youtube'),
-            'middleware' => ['api'],
-            'api_middleware' => ['auth:sanctum', 'throttle:60,1'],
+        'auth_page' => [
+            'path' => env('YOUTUBE_AUTH_PAGE_PATH', 'youtube-authorize'),
+            'middleware' => ['web'],
         ],
     ],
 
@@ -863,27 +552,55 @@ return [
 - `unlisted` - Video is unlisted, viewable with link
 - `public` - Video is public, searchable and viewable by all
 
-## Response Codes
+## Best Practices
 
-### Success Codes
-- `200` - OK: Request successful
-- `201` - Created: Resource created successfully
-- `202` - Accepted: Request accepted for processing
-- `204` - No Content: Request successful, no content to return
+### Single-User Mode
 
-### Client Error Codes
-- `400` - Bad Request: Invalid request data
-- `401` - Unauthorized: Authentication required
-- `403` - Forbidden: Access denied
-- `404` - Not Found: Resource not found
-- `409` - Conflict: Resource conflict
-- `413` - Payload Too Large: File too large
-- `415` - Unsupported Media Type: Invalid file format
-- `422` - Unprocessable Entity: Validation failed
-- `429` - Too Many Requests: Rate limit exceeded
+The package is designed for single-user/single-channel applications. For most use cases:
 
-### Server Error Codes
-- `500` - Internal Server Error: Server error
-- `502` - Bad Gateway: YouTube API error
-- `503` - Service Unavailable: Service temporarily down
-- `504` - Gateway Timeout: Request timeout
+```php
+// Always use usingDefault() for simplicity
+$video = YouTube::usingDefault()->uploadVideo($file, $metadata);
+
+// The service automatically:
+// - Uses the most recent active token
+// - Refreshes expired tokens
+// - Handles errors gracefully
+```
+
+### Multi-User Support (Advanced)
+
+If you need multi-user support, you can still use the legacy methods:
+
+```php
+// Store token with user_id during OAuth
+$tokenManager->storeToken($tokenData, $channelInfo, $userId);
+
+// Use user-specific token
+YouTube::forUser($userId)->uploadVideo($file, $metadata);
+```
+
+### Error Handling
+
+Always wrap YouTube operations in try-catch blocks:
+
+```php
+use Ekstremedia\LaravelYouTube\Exceptions\{
+    YouTubeException,
+    UploadException,
+    TokenException,
+    QuotaExceededException
+};
+
+try {
+    $video = YouTube::usingDefault()->uploadVideo($file, $metadata);
+} catch (QuotaExceededException $e) {
+    // Retry after quota resets
+} catch (UploadException $e) {
+    // Handle upload failure
+} catch (TokenException $e) {
+    // Redirect to authorization page
+} catch (YouTubeException $e) {
+    // Handle general errors
+}
+```

@@ -19,7 +19,7 @@ This package is designed for:
 1. **General Use**: Generic open-source YouTube API integration for Laravel applications
 2. **Personal Use**: Automated video uploads from Raspberry Pi cameras (timelapse, security)
 3. **Content Creators**: Managing YouTube channels programmatically
-4. **Video Platforms**: Building video management systems
+4. **Single-User Applications**: Designed primarily for single-user/single-channel scenarios
 
 ## Common Commands
 
@@ -69,16 +69,8 @@ laravel-youtube/
 │   ├── Facades/
 │   │   └── YouTube.php          # Main facade
 │   ├── Http/
-│   │   └── Controllers/         # API and admin controllers
-│   │       ├── Api/             # API endpoints
-│   │       │   ├── UploadController.php
-│   │       │   ├── VideoController.php
-│   │       │   └── ChannelController.php
-│   │       ├── Admin/           # Admin panel
-│   │       │   ├── DashboardController.php
-│   │       │   ├── VideoController.php
-│   │       │   └── TokenController.php
-│   │       └── AuthController.php
+│   │   └── Controllers/
+│   │       └── AuthController.php  # OAuth & authorization page
 │   ├── Models/
 │   │   ├── YouTubeToken.php    # OAuth token storage
 │   │   └── YouTubeVideo.php    # Video metadata
@@ -86,8 +78,6 @@ laravel-youtube/
 │   │   ├── YouTubeService.php  # Core YouTube API wrapper
 │   │   ├── TokenManager.php    # Token storage & refresh
 │   │   └── AuthService.php     # OAuth flow handler
-│   ├── Jobs/
-│   │   └── UploadVideoJob.php  # Background upload processing
 │   ├── Console/Commands/
 │   │   ├── RefreshTokensCommand.php
 │   │   └── ClearExpiredTokensCommand.php
@@ -108,23 +98,21 @@ laravel-youtube/
 │       ├── YouTubeTokenFactory.php
 │       └── YouTubeVideoFactory.php
 ├── resources/
-│   └── views/                  # Admin panel views (Blade)
+│   └── views/
+│       └── authorize.blade.php  # Authorization page view
 ├── routes/
-│   ├── web.php                 # OAuth routes
-│   ├── api.php                 # API endpoints
-│   └── admin.php               # Admin panel routes
+│   └── web.php                 # OAuth routes & authorization page
 ├── tests/
 │   ├── Feature/                # Feature tests
 │   │   ├── YouTubeServiceTest.php
 │   │   ├── UploadServiceTest.php
-│   │   ├── ApiEndpointsTest.php
 │   │   └── TokenManagementTest.php
 │   ├── Unit/                   # Unit tests
 │   │   └── ConfigTest.php
 │   ├── TestCase.php            # Base test case
 │   └── Pest.php                # Pest configuration
 ├── docs/
-│   └── API_REFERENCE.md        # API documentation
+│   └── API_REFERENCE.md        # Service API documentation
 ├── README.md                   # Main documentation
 ├── CLAUDE.md                   # This file
 ├── CHANGELOG.md
@@ -141,7 +129,9 @@ laravel-youtube/
 **Purpose**: Main interface for YouTube API operations
 
 **Key Methods**:
-- `forUser(int $userId, ?string $channelId = null)` - Set user context
+- `usingDefault()` - Use default (most recent) active token
+- `forChannel(string $channelId)` - Use token for specific channel
+- `forUser(int $userId, ?string $channelId = null)` - Set user context (legacy support)
 - `withToken(YouTubeToken $token)` - Use specific token
 - `uploadVideo($video, array $metadata, array $options = [])` - Upload videos
 - `getVideos(array $options = [])` - List videos
@@ -178,7 +168,8 @@ laravel-youtube/
 - Cache-based retrieval (1 hour TTL)
 - Composite database indexes for performance
 - Automatic cache invalidation
-- Multi-channel support per user
+- Single-user mode (user_id = null by default)
+- Can be extended for multi-user scenarios
 
 #### 3. AuthService
 
@@ -205,7 +196,7 @@ laravel-youtube/
 **YouTubeToken** (`src/Models/YouTubeToken.php`):
 - Stores OAuth tokens (encrypted)
 - Tracks token expiry and refresh count
-- Supports multiple channels per user
+- Designed for single-user mode (user_id nullable)
 - Scopes: `active()`, `expired()`, `expiringSoon()`, `forUser()`, `forChannel()`
 - Methods: `hasScope()`, `markAsRefreshed()`, `activate()`, `deactivate()`
 
@@ -216,22 +207,20 @@ laravel-youtube/
 - Computed attributes: `watch_url`, `embed_url`, `studio_url`, `formatted_view_count`
 - Scopes: `public()`, `private()`, `unlisted()`, `processed()`, `search()`
 
-#### 5. UploadVideoJob
+#### 5. Authorization Page
 
-**Location**: `src/Jobs/UploadVideoJob.php`
+**Route**: `/youtube-authorize` (configurable)
+**View**: `resources/views/authorize.blade.php`
+**Controller**: `AuthController::index()`
 
-**Purpose**: Background video upload processing
+**Purpose**: Simple web interface for OAuth authorization
 
 **Features**:
-- Queue: `media`
-- Tries: 3
-- Timeout: 2 hours
-- Backoff: 1min, 5min, 15min (exponential)
-- Progress tracking with callbacks
-- Automatic thumbnail upload
-- Webhook notifications
-- Automatic cleanup of temp files
-- Comprehensive error logging
+- Checks if credentials are configured
+- Displays connected channel information
+- Provides authorization/re-authorization button
+- Shows token status and expiration
+- Automatically refreshes expired tokens
 
 ### Database Schema
 
@@ -310,13 +299,12 @@ laravel-youtube/
 - OAuth flow and token management
 - Video upload (simple, chunked, from path)
 - File size validation
-- API CRUD operations
+- Video CRUD operations via service
 - Token refresh and expiry
-- Multi-channel support
+- Single-user mode
 - Rate limiting
 - Authentication
 - Raspberry Pi integration scenario
-- Background job processing
 
 **Running Tests**:
 ```bash
@@ -342,31 +330,29 @@ vendor/bin/pest --stop-on-failure
 **Recommended Setup**:
 1. Pi sends video to Laravel endpoint
 2. Laravel stores video temporarily
-3. Dispatches `UploadVideoJob` to queue
-4. Job uploads to YouTube with metadata
-5. Adds to playlist automatically
-6. Sends webhook notification on completion
-7. Cleans up temporary files
+3. Upload using `YouTube::usingDefault()` (synchronous or via your own job)
+4. Optional: Add to playlist, send webhooks, etc.
+5. Clean up temporary files
 
 **Example Implementation**:
 ```php
 // Pi upload endpoint
 Route::post('/api/pi/upload', function (Request $request) {
-    $path = $request->file('video')->store('pi-uploads');
+    $file = $request->file('video');
 
-    UploadVideoJob::dispatch(
-        userId: auth()->id(),
-        videoPath: storage_path('app/' . $path),
-        metadata: [
-            'title' => "Pi Camera - " . now()->format('Y-m-d'),
-            'description' => 'Automated timelapse',
-            'tags' => ['raspberry-pi', 'timelapse'],
-            'privacy_status' => 'unlisted',
-        ],
-        notifyUrl: 'https://yourapp.com/webhook'
-    )->onQueue('media');
+    // Upload immediately using default token
+    $video = YouTube::usingDefault()->uploadVideo($file, [
+        'title' => "Pi Camera - " . now()->format('Y-m-d'),
+        'description' => 'Automated timelapse',
+        'tags' => ['raspberry-pi', 'timelapse'],
+        'privacy_status' => 'unlisted',
+    ]);
 
-    return ['message' => 'Upload queued'];
+    return [
+        'message' => 'Upload complete',
+        'video_id' => $video->video_id,
+        'watch_url' => $video->watch_url,
+    ];
 });
 ```
 
@@ -427,33 +413,32 @@ YOUTUBE_LOGGING_LEVEL=debug
 ```php
 use EkstreMedia\LaravelYouTube\Facades\YouTube;
 
-// Upload video
+// Upload video (single-user mode)
+$video = YouTube::usingDefault()->uploadVideo($file, [
+    'title' => 'My Video',
+    'description' => 'Description',
+    'privacy_status' => 'private',
+]);
+
+// Upload for specific user (legacy/multi-user support)
 $video = YouTube::forUser(auth()->id())->uploadVideo($file, [
     'title' => 'My Video',
     'description' => 'Description',
     'privacy_status' => 'private',
 ]);
 
-// Queue upload (recommended for Pi uploads)
-UploadVideoJob::dispatch(
-    userId: auth()->id(),
-    videoPath: '/path/to/video.mp4',
-    metadata: ['title' => 'Video'],
-)->onQueue('media');
-
-// Get user's videos
-$videos = YouTube::forUser(auth()->id())->getVideos();
+// Get videos
+$videos = YouTube::usingDefault()->getVideos();
 
 // Update video
-YouTube::forUser(auth()->id())->updateVideo('video-id', [
+YouTube::usingDefault()->updateVideo('video-id', [
     'title' => 'New Title',
     'privacy_status' => 'public',
 ]);
 
 // Get channel info
-$channel = YouTube::forUser(auth()->id())->getChannel();
-
-
+$channel = YouTube::usingDefault()->getChannel();
+```
 
 ### Environment Variables Template
 
@@ -464,8 +449,7 @@ YOUTUBE_CLIENT_SECRET=your-client-secret
 YOUTUBE_REDIRECT_URI=https://yourapp.com/youtube/callback
 
 # Optional
-YOUTUBE_ADMIN_ENABLED=true
-YOUTUBE_ADMIN_PREFIX=youtube-admin
+YOUTUBE_AUTH_PAGE_PATH=youtube-authorize
 YOUTUBE_DEFAULT_PRIVACY=private
 YOUTUBE_UPLOAD_CHUNK_SIZE=10485760
 YOUTUBE_RATE_LIMIT_ENABLED=true

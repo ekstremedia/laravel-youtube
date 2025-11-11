@@ -34,21 +34,39 @@ class AuthController extends Controller
     }
 
     /**
-     * Show the authentication page
+     * Show the authorization page (simplified for single user)
      */
     public function index(Request $request)
     {
-        $userId = Auth::id();
+        // Check if credentials are configured
+        $clientId = config('youtube.credentials.client_id');
+        $clientSecret = config('youtube.credentials.client_secret');
+        $credentialsConfigured = ! empty($clientId) && ! empty($clientSecret);
 
-        // Get all tokens for this user
-        $tokens = YouTubeToken::where('user_id', $userId)
-            ->where('is_active', true)
+        // Get the most recent active token (single-user mode)
+        $token = YouTubeToken::where('is_active', true)
             ->orderBy('last_refreshed_at', 'desc')
-            ->get();
+            ->first();
 
-        return view('youtube::auth.authenticate', [
-            'tokens' => $tokens,
-            'hasTokens' => $tokens->count() > 0,
+        // Try to refresh token if it's expiring
+        if ($token && $this->tokenManager->needsRefresh($token)) {
+            try {
+                $newTokenData = $this->authService->refreshAccessToken(
+                    $this->tokenManager->getRefreshToken($token)
+                );
+                $this->tokenManager->updateToken($token, $newTokenData);
+                $token->refresh(); // Reload from database
+            } catch (\Exception $e) {
+                Log::warning('Failed to refresh token on auth page', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return view('youtube::auth.authorize', [
+            'credentialsConfigured' => $credentialsConfigured,
+            'hasToken' => $token !== null,
+            'token' => $token,
         ]);
     }
 
@@ -105,13 +123,13 @@ class AuthController extends Controller
                 'error_description' => $request->input('error_description'),
             ]);
 
-            return redirect()->route('youtube.admin.dashboard')
+            return redirect()->route('youtube.authorize')
                 ->with('error', 'Authentication failed: ' . $request->input('error_description', 'Unknown error'));
         }
 
         // Verify we have authorization code
         if (! $request->has('code')) {
-            return redirect()->route('youtube.admin.dashboard')
+            return redirect()->route('youtube.authorize')
                 ->with('error', 'No authorization code received');
         }
 
@@ -125,21 +143,18 @@ class AuthController extends Controller
             // Get channel information
             $channelInfo = $this->authService->getChannelInfo($tokenData['access_token']);
 
-            // Store token in database
-            $userId = Auth::id();
-            $token = $this->tokenManager->storeToken($tokenData, $channelInfo, $userId);
+            // Store token in database (null user_id for single-user mode)
+            $token = $this->tokenManager->storeToken($tokenData, $channelInfo, null);
 
             Log::info('YouTube authentication successful', [
-                'user_id' => $userId,
                 'channel_id' => $channelInfo['id'],
                 'channel_title' => $channelInfo['title'],
             ]);
 
             // Clear session data
-            $returnUrl = Session::pull('youtube_return_url', route('youtube.admin.dashboard'));
             Session::forget('youtube_target_channel');
 
-            return redirect($returnUrl)
+            return redirect()->route('youtube.authorize')
                 ->with('success', 'Successfully connected YouTube channel: ' . $channelInfo['title']);
         } catch (\Exception $e) {
             Log::error('YouTube OAuth callback error', [
@@ -147,7 +162,7 @@ class AuthController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('youtube.admin.dashboard')
+            return redirect()->route('youtube.authorize')
                 ->with('error', 'Failed to authenticate with YouTube: ' . $e->getMessage());
         }
     }
@@ -160,13 +175,10 @@ class AuthController extends Controller
     public function revoke(Request $request)
     {
         $tokenId = $request->input('token_id');
-        $userId = Auth::id();
 
         try {
-            // Find the token
-            $token = YouTubeToken::where('id', $tokenId)
-                ->where('user_id', $userId)
-                ->firstOrFail();
+            // Find the token (single-user mode)
+            $token = YouTubeToken::findOrFail($tokenId);
 
             // Revoke token with YouTube
             $accessToken = $this->tokenManager->getAccessToken($token);
@@ -176,7 +188,6 @@ class AuthController extends Controller
             $this->tokenManager->deactivateToken($token);
 
             Log::info('YouTube token revoked', [
-                'user_id' => $userId,
                 'token_id' => $tokenId,
                 'channel_id' => $token->channel_id,
             ]);
@@ -191,7 +202,6 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to revoke YouTube token', [
                 'error' => $e->getMessage(),
-                'user_id' => $userId,
                 'token_id' => $tokenId,
             ]);
 

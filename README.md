@@ -15,7 +15,7 @@ A comprehensive Laravel package for YouTube API v3 integration with OAuth2 authe
 - 🔐 **OAuth2 Authentication** - Secure authentication with automatic token refresh
 - 📹 **Video Management** - Complete CRUD operations for videos
 - 📤 **Advanced Upload** - Chunked uploads with progress tracking
-- 📺 **Channel Management** - Multi-channel support per user
+- 📺 **Channel Management** - Designed for single-user/single-channel applications
 - 🎨 **Thumbnail Management** - Custom thumbnail upload support
 - 🔄 **Queue Support** - Background video uploads via Laravel jobs
 - 🎯 **Rate Limiting** - Built-in rate limiting to respect API quotas
@@ -28,7 +28,6 @@ A comprehensive Laravel package for YouTube API v3 integration with OAuth2 authe
 - 💾 **Database Storage** - Track all uploads and video metadata
 - 🔒 **Encrypted Token Storage** - Secure storage of OAuth tokens
 - 📝 **Comprehensive Logging** - Detailed logging for debugging
-- 🎨 **Admin Panel** - Optional web interface for management
 - 🧪 **Test Coverage** - Extensive test suite with Pest
 
 ## 📋 Requirements
@@ -56,11 +55,8 @@ php artisan vendor:publish --provider="EkstreMedia\LaravelYouTube\YouTubeService
 # Publish migrations
 php artisan vendor:publish --provider="EkstreMedia\LaravelYouTube\YouTubeServiceProvider" --tag="youtube-migrations"
 
-# Optional: Publish views for admin panel
+# Optional: Publish views for authorization page
 php artisan vendor:publish --provider="EkstreMedia\LaravelYouTube\YouTubeServiceProvider" --tag="youtube-views"
-
-# Optional: Publish assets for admin panel
-php artisan vendor:publish --provider="EkstreMedia\LaravelYouTube\YouTubeServiceProvider" --tag="youtube-assets"
 ```
 
 ### Step 3: Configure Environment Variables
@@ -73,13 +69,8 @@ YOUTUBE_CLIENT_ID=your-client-id-here
 YOUTUBE_CLIENT_SECRET=your-client-secret-here
 YOUTUBE_REDIRECT_URI=https://yourdomain.com/youtube/callback
 
-# Optional: Admin Panel
-YOUTUBE_ADMIN_ENABLED=true
-YOUTUBE_ADMIN_PREFIX=youtube-admin
-
 # Optional: Authentication Page
-YOUTUBE_AUTH_PAGE_ENABLED=true
-YOUTUBE_AUTH_PAGE_PATH=youtube-authenticate
+YOUTUBE_AUTH_PAGE_PATH=youtube-authorize
 
 # Optional: Upload Settings
 YOUTUBE_UPLOAD_CHUNK_SIZE=10485760  # 10MB chunks
@@ -144,11 +135,11 @@ $video = YouTube::forUser(auth()->id())
 echo "Video uploaded: " . $video->watch_url;
 ```
 
-### Raspberry Pi Integration & API Usage
+### Raspberry Pi Integration
 
-Perfect for automated timelapse or security camera uploads. When uploading via API without a logged-in user, use these methods:
+Perfect for automated timelapse or security camera uploads. The package is designed for single-user/single-channel applications.
 
-#### Using Default Token (Without User Context)
+#### Using the Service Without User Context
 
 ```php
 // Method 1: Use the default (most recent) active token
@@ -156,13 +147,15 @@ YouTube::usingDefault()->uploadVideo($file, $metadata);
 
 // Method 2: Use a specific channel by ID
 YouTube::forChannel('UCxxxxxxxxxx')->uploadVideo($file, $metadata);
+
+// Method 3: For legacy support, specify user ID
+YouTube::forUser($userId)->uploadVideo($file, $metadata);
 ```
 
-#### Complete Raspberry Pi API Example
+#### Complete Raspberry Pi Example
 
 ```php
 // In your Pi upload endpoint
-use EkstreMedia\LaravelYouTube\Jobs\UploadVideoJob;
 use Ekstremedia\LaravelYouTube\Facades\YouTube;
 
 Route::post('/api/pi/upload', function (Request $request) {
@@ -173,7 +166,7 @@ Route::post('/api/pi/upload', function (Request $request) {
 
     $file = $request->file('video');
 
-    // Option 1: Upload immediately (synchronous)
+    // Upload using default token (single-user mode)
     $video = YouTube::usingDefault()->uploadVideo($file, [
         'title' => "Pi Camera {$request->camera_id} - " . now()->format('Y-m-d H:i'),
         'description' => 'Automated timelapse from Raspberry Pi',
@@ -186,31 +179,6 @@ Route::post('/api/pi/upload', function (Request $request) {
         'video_id' => $video->video_id,
         'watch_url' => $video->watch_url,
     ]);
-});
-
-// Option 2: Queue upload (recommended for large files)
-Route::post('/api/pi/upload-queue', function (Request $request) {
-    $request->validate([
-        'video' => 'required|file|mimes:mp4,avi,mov|max:5242880',
-        'camera_id' => 'required|string',
-    ]);
-
-    $path = $request->file('video')->store('pi-uploads');
-
-    UploadVideoJob::dispatch(
-        userId: null, // No user - will use default token in job
-        videoPath: storage_path('app/' . $path),
-        metadata: [
-            'title' => "Pi Camera {$request->camera_id} - " . now()->format('Y-m-d H:i'),
-            'description' => 'Automated upload from Raspberry Pi',
-            'tags' => ['raspberry-pi', 'timelapse', $request->camera_id],
-            'privacy_status' => 'unlisted',
-        ],
-        channelId: null,
-        notifyUrl: 'https://yourapp.com/webhook/upload-complete'
-    )->onQueue('media');
-
-    return response()->json(['success' => true, 'message' => 'Upload queued']);
 });
 ```
 
@@ -233,57 +201,54 @@ curl -X POST $API_ENDPOINT \
 
 #### One-Time Google OAuth Setup
 
-Since API uploads don't have a logged-in user, you need one YouTube token in your database:
+Visit the authorization page to connect your YouTube channel:
 
-```bash
-# In your Laravel app, run this once
-php artisan tinker
-
-# Generate OAuth URL
-$authService = app(\Ekstremedia\LaravelYouTube\Services\AuthService::class);
-$url = $authService->getAuthUrl();
-echo $url;
-
-# Visit the URL in browser, authorize with Google
-# After callback, the token is stored in database
-# All future API uploads will automatically use and refresh this token!
 ```
+https://yourdomain.com/youtube-authorize
+```
+
+The page will:
+1. Check if credentials are configured
+2. Show your connected channel (if any)
+3. Allow you to authorize/re-authorize with Google
+4. Automatically refresh expired tokens
+
+After authorization, all uploads will use this token automatically.
 
 ## 📚 Comprehensive Documentation
 
-### Authentication Page (Frontend)
+### Authentication Page
 
-The package includes a ready-to-use authentication page where users can connect their YouTube channels:
+The package includes a simple authentication page for connecting your YouTube channel:
 
-**Access the page:** `https://yourdomain.com/youtube-authenticate` (configurable)
+**Access the page:** `https://yourdomain.com/youtube-authorize` (configurable)
 
 **Features:**
-- Beautiful, modern UI with glass morphism design
-- Shows all connected YouTube channels
-- One-click connect/disconnect
-- Token status and expiration info
-- Permissions overview
+- Check if credentials are configured
+- View connected YouTube channel
+- One-click authorize/re-authorize
+- Automatic token refresh
+- Clean, simple interface
 
 **Configuration:**
 ```env
-YOUTUBE_AUTH_PAGE_ENABLED=true
-YOUTUBE_AUTH_PAGE_PATH=youtube-authenticate
+YOUTUBE_AUTH_PAGE_PATH=youtube-authorize
 ```
 
 **Usage in your app:**
 ```php
 // Link to authentication page
-<a href="{{ route('youtube.authenticate') }}">Connect YouTube</a>
+<a href="{{ route('youtube.authorize') }}">Connect YouTube</a>
 
 // Or use the configured path
-<a href="/{{ config('youtube.routes.auth_page.path') }}">Connect YouTube</a>
+<a href="/{{ config('youtube.routes.auth_page.path') }}">Authorize YouTube</a>
 ```
 
-The page requires user authentication (configurable middleware). Users can:
-1. View all connected channels
-2. Connect new channels
-3. Disconnect existing channels
-4. See token expiration status
+The page shows:
+1. Configuration status (credentials check)
+2. Connected channel information
+3. Authorization button
+4. Token expiration and refresh status
 
 ### Authentication & Token Management
 
@@ -454,76 +419,51 @@ foreach ($tokens as $token) {
 
 ### Background Jobs & Queues
 
-```php
-use EkstreMedia\LaravelYouTube\Jobs\UploadVideoJob;
+You can implement your own background job processing. Here's an example:
 
-// Dispatch upload job
-UploadVideoJob::dispatch(
-    userId: auth()->id(),
+```php
+// Create your own job
+namespace App\Jobs;
+
+use Ekstremedia\LaravelYouTube\Facades\YouTube;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+
+class UploadYouTubeVideo implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public function __construct(
+        public string $videoPath,
+        public array $metadata
+    ) {}
+
+    public function handle(): void
+    {
+        $video = YouTube::usingDefault()->uploadVideo(
+            $this->videoPath,
+            $this->metadata
+        );
+
+        // Clean up temporary file
+        unlink($this->videoPath);
+    }
+}
+
+// Dispatch the job
+UploadYouTubeVideo::dispatch(
     videoPath: '/path/to/video.mp4',
     metadata: [
         'title' => 'Queued Upload',
         'description' => 'Uploaded via queue',
         'tags' => ['queued', 'background'],
         'privacy_status' => 'private',
-    ],
-    channelId: 'UC123456', // Optional: specific channel
-    thumbnailPath: '/path/to/thumbnail.jpg', // Optional
-    notifyUrl: 'https://yourapp.com/webhook' // Optional: webhook
+    ]
 )->onQueue('media');
-
-// The job handles:
-// - Automatic retries (3 attempts)
-// - Exponential backoff (1min, 5min, 15min)
-// - Progress tracking
-// - Webhook notifications
-// - Cleanup of temporary files
-// - Error handling and logging
 ```
-
-### API Endpoints
-
-The package provides RESTful API endpoints:
-
-#### Video Endpoints
-```
-GET    /api/youtube/videos              - List user's videos
-GET    /api/youtube/videos/{id}         - Get video details
-PUT    /api/youtube/videos/{id}         - Update video
-DELETE /api/youtube/videos/{id}         - Delete video
-POST   /api/youtube/videos/{id}/thumbnail - Set thumbnail
-```
-
-#### Upload Endpoints
-```
-POST   /api/youtube/upload               - Upload video
-GET    /api/youtube/upload/status/{id}   - Get upload status
-```
-
-#### Channel Endpoints
-```
-GET    /api/youtube/channel              - Get channel info
-GET    /api/youtube/channel/videos       - List channel videos
-```
-
-### Admin Panel
-
-Access the admin panel at `/youtube-admin` (configurable):
-
-```php
-// In routes/web.php
-Route::middleware(['auth', 'admin'])->group(function () {
-    // Admin panel routes are automatically registered
-    // Configure in config/youtube.php
-});
-```
-
-Features:
-- Token management
-- Video listing and management
-- Upload interface
-- Channel statistics
-- Upload history
 
 ### Advanced Features
 

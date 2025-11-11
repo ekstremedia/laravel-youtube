@@ -4,11 +4,7 @@ namespace Ekstremedia\LaravelYouTube;
 
 use Ekstremedia\LaravelYouTube\Console\Commands\ClearExpiredTokensCommand;
 use Ekstremedia\LaravelYouTube\Console\Commands\RefreshTokensCommand;
-use Ekstremedia\LaravelYouTube\Http\Middleware\YouTubeAdminAccess;
-use Ekstremedia\LaravelYouTube\Http\Middleware\YouTubeApiAuth;
-use Ekstremedia\LaravelYouTube\Http\Middleware\YouTubeIpWhitelist;
 use Ekstremedia\LaravelYouTube\Http\Middleware\YouTubeRateLimit;
-use Ekstremedia\LaravelYouTube\Http\Middleware\YouTubeWebhookSignature;
 use Ekstremedia\LaravelYouTube\Services\AuthService;
 use Ekstremedia\LaravelYouTube\Services\TokenManager;
 use Ekstremedia\LaravelYouTube\Services\YouTubeService;
@@ -66,10 +62,6 @@ class YouTubeServiceProvider extends ServiceProvider
     {
         // Register middleware
         $router = $this->app->make(Router::class);
-        $router->aliasMiddleware('youtube.auth', YouTubeApiAuth::class);
-        $router->aliasMiddleware('youtube.ip', YouTubeIpWhitelist::class);
-        $router->aliasMiddleware('youtube.webhook', YouTubeWebhookSignature::class);
-        $router->aliasMiddleware('youtube.admin', YouTubeAdminAccess::class);
         $router->aliasMiddleware('youtube.ratelimit', YouTubeRateLimit::class);
 
         // Publish configuration
@@ -87,11 +79,6 @@ class YouTubeServiceProvider extends ServiceProvider
             __DIR__ . '/../resources/views' => resource_path('views/vendor/youtube'),
         ], 'youtube-views');
 
-        // Publish assets (CSS, JS)
-        $this->publishes([
-            __DIR__ . '/../resources/dist' => public_path('vendor/youtube'),
-        ], 'youtube-assets');
-
         // Load migrations
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
 
@@ -101,15 +88,6 @@ class YouTubeServiceProvider extends ServiceProvider
         // Load routes
         if (config('youtube.routes.enabled')) {
             $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
-        }
-
-        if (config('youtube.routes.enabled')) {
-            $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
-        }
-
-        // Load admin routes
-        if (config('youtube.admin.enabled')) {
-            $this->loadRoutesFrom(__DIR__ . '/../routes/admin.php');
         }
 
         // Register console commands if running in console
@@ -126,13 +104,5 @@ class YouTubeServiceProvider extends ServiceProvider
                 $schedule->command('youtube:clear-expired-tokens')->daily();
             });
         }
-
-        // Register view components (TODO: Implement these components)
-        // $this->loadViewComponentsAs('youtube', [
-        //     'upload-form' => \Ekstremedia\LaravelYouTube\View\Components\UploadForm::class,
-        //     'video-list' => \Ekstremedia\LaravelYouTube\View\Components\VideoList::class,
-        //     'channel-info' => \Ekstremedia\LaravelYouTube\View\Components\ChannelInfo::class,
-        //     'auth-button' => \Ekstremedia\LaravelYouTube\View\Components\AuthButton::class,
-        // ]);
     }
 }

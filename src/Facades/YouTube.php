@@ -5,6 +5,8 @@ namespace Ekstremedia\LaravelYouTube\Facades;
 use Illuminate\Support\Facades\Facade;
 
 /**
+ * @method static \Ekstremedia\LaravelYouTube\Services\YouTubeService usingDefault(?string $channelId = null)
+ * @method static \Ekstremedia\LaravelYouTube\Services\YouTubeService forChannel(string $channelId)
  * @method static \Ekstremedia\LaravelYouTube\Services\YouTubeService forUser(int $userId, ?string $channelId = null)
  * @method static \Ekstremedia\LaravelYouTube\Services\YouTubeService withToken(\Ekstremedia\LaravelYouTube\Models\YouTubeToken $token)
  * @method static array getChannel(array $parts = ['snippet', 'statistics', 'contentDetails'])
@@ -14,9 +16,6 @@ use Illuminate\Support\Facades\Facade;
  * @method static array updateVideo(string $videoId, array $metadata)
  * @method static bool deleteVideo(string $videoId)
  * @method static bool setThumbnail(string $videoId, $thumbnail)
- * @method static array getPlaylists(array $options = [])
- * @method static array createPlaylist(array $data)
- * @method static bool addToPlaylist(string $playlistId, string $videoId, ?int $position = null)
  *
  * @see \Ekstremedia\LaravelYouTube\Services\YouTubeService
  */

@@ -4,7 +4,6 @@
 - [Authentication](#authentication)
 - [Video Operations](#video-operations)
 - [Upload Operations](#upload-operations)
-- [Playlist Operations](#playlist-operations)
 - [Channel Operations](#channel-operations)
 - [Token Management](#token-management)
 - [Admin Panel](#admin-panel)
@@ -250,7 +249,6 @@ Upload a new video to YouTube.
 - `tags` (array): Video tags
 - `category_id` (string): YouTube category ID
 - `privacy_status` (string): private, unlisted, or public
-- `playlist_id` (string): Add to playlist after upload
 - `thumbnail` (file): Custom thumbnail
 - `made_for_kids` (boolean): Kids content flag
 - `embeddable` (boolean): Allow embedding
@@ -290,171 +288,6 @@ Status values:
 - `processing`: Upload in progress
 - `completed`: Upload successful
 - `failed`: Upload failed
-
-## Playlist Operations
-
-### GET /api/youtube/playlists
-List user's playlists.
-
-**Headers:**
-- `Authorization: Bearer {token}`
-
-**Query Parameters:**
-- `page` (integer): Page number
-- `per_page` (integer): Items per page
-- `channel_id` (string): Filter by channel
-
-**Response:**
-```json
-{
-  "data": [
-    {
-      "id": "PLxxxxxx",
-      "title": "My Playlist",
-      "description": "Playlist description",
-      "item_count": 25,
-      "privacy_status": "public",
-      "thumbnail": "https://i.ytimg.com/vi/xxx/maxresdefault.jpg",
-      "published_at": "2024-01-15T10:00:00Z"
-    }
-  ],
-  "meta": {
-    "total": 10,
-    "per_page": 20,
-    "current_page": 1
-  }
-}
-```
-
-### POST /api/youtube/playlists
-Create a new playlist.
-
-**Headers:**
-- `Authorization: Bearer {token}`
-- `Content-Type: application/json`
-
-**Request Body:**
-```json
-{
-  "title": "New Playlist",
-  "description": "Playlist description",
-  "privacy_status": "public",
-  "tags": ["tag1", "tag2"]
-}
-```
-
-**Response:**
-```json
-{
-  "message": "Playlist created successfully",
-  "data": {
-    "id": "PLxxxxxx",
-    "title": "New Playlist",
-    "url": "https://www.youtube.com/playlist?list=PLxxxxxx"
-  }
-}
-```
-
-### GET /api/youtube/playlists/{playlist_id}
-Get playlist details.
-
-**Headers:**
-- `Authorization: Bearer {token}`
-
-**Response:**
-```json
-{
-  "data": {
-    "id": "PLxxxxxx",
-    "title": "Playlist Title",
-    "description": "Full description",
-    "item_count": 25,
-    "privacy_status": "public",
-    "tags": ["tag1", "tag2"],
-    "thumbnail": "https://i.ytimg.com/vi/xxx/maxresdefault.jpg",
-    "channel_id": "UC123456",
-    "channel_title": "My Channel",
-    "published_at": "2024-01-15T10:00:00Z"
-  }
-}
-```
-
-### PUT /api/youtube/playlists/{playlist_id}
-Update playlist metadata.
-
-**Headers:**
-- `Authorization: Bearer {token}`
-- `Content-Type: application/json`
-
-**Request Body:**
-```json
-{
-  "title": "Updated Title",
-  "description": "Updated description",
-  "privacy_status": "private"
-}
-```
-
-**Response:**
-```json
-{
-  "message": "Playlist updated successfully",
-  "data": {
-    "id": "PLxxxxxx",
-    "title": "Updated Title"
-  }
-}
-```
-
-### DELETE /api/youtube/playlists/{playlist_id}
-Delete a playlist.
-
-**Headers:**
-- `Authorization: Bearer {token}`
-
-**Response:**
-```json
-{
-  "message": "Playlist deleted successfully"
-}
-```
-
-### POST /api/youtube/playlists/{playlist_id}/videos
-Add video to playlist.
-
-**Headers:**
-- `Authorization: Bearer {token}`
-- `Content-Type: application/json`
-
-**Request Body:**
-```json
-{
-  "video_id": "dQw4w9WgXcQ",
-  "position": 0,
-  "note": "Great video!"
-}
-```
-
-**Response:**
-```json
-{
-  "message": "Video added to playlist",
-  "playlist_item_id": "PLIxxxxxx"
-}
-```
-
-### DELETE /api/youtube/playlists/{playlist_id}/videos/{video_id}
-Remove video from playlist.
-
-**Headers:**
-- `Authorization: Bearer {token}`
-
-**Response:**
-```json
-{
-  "message": "Video removed from playlist"
-}
-```
 
 ## Channel Operations
 
@@ -507,19 +340,6 @@ List videos from the authenticated channel.
 
 **Response:**
 Same as `/api/youtube/videos`
-
-### GET /api/youtube/channel/playlists
-List playlists from the authenticated channel.
-
-**Headers:**
-- `Authorization: Bearer {token}`
-
-**Query Parameters:**
-- `page` (integer): Page number
-- `per_page` (integer): Items per page
-
-**Response:**
-Same as `/api/youtube/playlists`
 
 ## Token Management
 
@@ -608,7 +428,6 @@ GET  /youtube-admin/videos               - Video listing
 GET  /youtube-admin/videos/{id}          - Video details
 GET  /youtube-admin/upload               - Upload interface
 POST /youtube-admin/upload               - Process upload
-GET  /youtube-admin/playlists            - Playlist management
 GET  /youtube-admin/channels             - Channel overview
 POST /youtube-admin/channels/sync        - Sync channel data
 ```
@@ -648,7 +467,6 @@ UploadVideoJob::dispatch(
         'category_id' => '22',
     ],
     channelId: 'UC123456',
-    playlistId: 'PLxxxxxx',
     thumbnailPath: '/path/to/thumb.jpg',
     notifyUrl: 'https://example.com/webhook'
 )->onQueue('media');
@@ -888,18 +706,9 @@ YouTube::updateVideo($videoId, array $metadata);
 YouTube::deleteVideo($videoId);
 YouTube::setThumbnail($videoId, $thumbnail);
 
-// Playlist operations
-YouTube::getPlaylists(array $options = []);
-YouTube::createPlaylist(array $data);
-YouTube::updatePlaylist($playlistId, array $data);
-YouTube::deletePlaylist($playlistId);
-YouTube::addToPlaylist($playlistId, $videoId, array $options = []);
-YouTube::removeFromPlaylist($playlistId, $playlistItemId);
-
 // Channel operations
 YouTube::getChannel(array $parts = []);
 YouTube::getChannelVideos($channelId, array $options = []);
-YouTube::getChannelPlaylists($channelId);
 ```
 
 ## Validation Rules
@@ -909,12 +718,10 @@ YouTube::getChannelPlaylists($channelId);
 ```php
 use EkstreMedia\LaravelYouTube\Rules\YouTubeVideoId;
 use EkstreMedia\LaravelYouTube\Rules\YouTubeChannelId;
-use EkstreMedia\LaravelYouTube\Rules\YouTubePlaylistId;
 
 $request->validate([
     'video_id' => ['required', new YouTubeVideoId()],
     'channel_id' => ['required', new YouTubeChannelId()],
-    'playlist_id' => ['required', new YouTubePlaylistId()],
 ]);
 ```
 

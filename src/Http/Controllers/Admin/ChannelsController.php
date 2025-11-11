@@ -79,14 +79,9 @@ class ChannelsController extends Controller
                 ->withToken($token)
                 ->getVideos(['maxResults' => 10, 'order' => 'date']);
 
-            $playlists = $this->youtubeService
-                ->withToken($token)
-                ->getPlaylists(['maxResults' => 10]);
-
             return view('youtube::admin.channels.show', [
                 'channel' => $channel,
                 'videos' => $videos['videos'] ?? [],
-                'playlists' => $playlists['playlists'] ?? [],
                 'token' => $token,
             ]);
         } catch (\Exception $e) {

@@ -16,7 +16,6 @@ A comprehensive Laravel package for YouTube API v3 integration with OAuth2 authe
 - 📹 **Video Management** - Complete CRUD operations for videos
 - 📤 **Advanced Upload** - Chunked uploads with progress tracking
 - 📺 **Channel Management** - Multi-channel support per user
-- 📝 **Playlist Management** - Create, update, and manage playlists
 - 🎨 **Thumbnail Management** - Custom thumbnail upload support
 - 🔄 **Queue Support** - Background video uploads via Laravel jobs
 - 🎯 **Rate Limiting** - Built-in rate limiting to respect API quotas
@@ -141,13 +140,26 @@ $video = YouTube::forUser(auth()->id())
 echo "Video uploaded: " . $video->watch_url;
 ```
 
-### Raspberry Pi Integration Example
+### Raspberry Pi Integration & API Usage
 
-Perfect for automated timelapse or security camera uploads:
+Perfect for automated timelapse or security camera uploads. When uploading via API without a logged-in user, use these methods:
+
+#### Using Default Token (Without User Context)
+
+```php
+// Method 1: Use the default (most recent) active token
+YouTube::usingDefault()->uploadVideo($file, $metadata);
+
+// Method 2: Use a specific channel by ID
+YouTube::forChannel('UCxxxxxxxxxx')->uploadVideo($file, $metadata);
+```
+
+#### Complete Raspberry Pi API Example
 
 ```php
 // In your Pi upload endpoint
 use EkstreMedia\LaravelYouTube\Jobs\UploadVideoJob;
+use Ekstremedia\LaravelYouTube\Facades\YouTube;
 
 Route::post('/api/pi/upload', function (Request $request) {
     $request->validate([
@@ -155,25 +167,82 @@ Route::post('/api/pi/upload', function (Request $request) {
         'camera_id' => 'required|string',
     ]);
 
+    $file = $request->file('video');
+
+    // Option 1: Upload immediately (synchronous)
+    $video = YouTube::usingDefault()->uploadVideo($file, [
+        'title' => "Pi Camera {$request->camera_id} - " . now()->format('Y-m-d H:i'),
+        'description' => 'Automated timelapse from Raspberry Pi',
+        'tags' => ['raspberry-pi', 'timelapse', $request->camera_id],
+        'privacy_status' => 'unlisted',
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'video_id' => $video->video_id,
+        'watch_url' => $video->watch_url,
+    ]);
+});
+
+// Option 2: Queue upload (recommended for large files)
+Route::post('/api/pi/upload-queue', function (Request $request) {
+    $request->validate([
+        'video' => 'required|file|mimes:mp4,avi,mov|max:5242880',
+        'camera_id' => 'required|string',
+    ]);
+
     $path = $request->file('video')->store('pi-uploads');
 
-    // Queue the upload job
     UploadVideoJob::dispatch(
-        auth()->id(),
-        storage_path('app/' . $path),
-        [
-            'title' => "Pi Camera {$request->camera_id} - " . now()->format('Y-m-d'),
+        userId: null, // No user - will use default token in job
+        videoPath: storage_path('app/' . $path),
+        metadata: [
+            'title' => "Pi Camera {$request->camera_id} - " . now()->format('Y-m-d H:i'),
             'description' => 'Automated upload from Raspberry Pi',
             'tags' => ['raspberry-pi', 'timelapse', $request->camera_id],
             'privacy_status' => 'unlisted',
         ],
         channelId: null,
-        playlistId: 'PLxxxxxx', // Add to specific playlist
         notifyUrl: 'https://yourapp.com/webhook/upload-complete'
     )->onQueue('media');
 
-    return response()->json(['message' => 'Upload queued']);
+    return response()->json(['success' => true, 'message' => 'Upload queued']);
 });
+```
+
+#### From Raspberry Pi (Shell Script)
+
+```bash
+#!/bin/bash
+# On your Raspberry Pi
+
+VIDEO_FILE="/home/pi/videos/timelapse_$(date +%Y%m%d_%H%M%S).mp4"
+API_ENDPOINT="https://your-domain.com/api/pi/upload"
+API_TOKEN="your-api-token"
+
+# Upload to your Laravel API
+curl -X POST $API_ENDPOINT \
+  -H "Authorization: Bearer $API_TOKEN" \
+  -F "video=@$VIDEO_FILE" \
+  -F "camera_id=pi_camera_1"
+```
+
+#### One-Time Google OAuth Setup
+
+Since API uploads don't have a logged-in user, you need one YouTube token in your database:
+
+```bash
+# In your Laravel app, run this once
+php artisan tinker
+
+# Generate OAuth URL
+$authService = app(\Ekstremedia\LaravelYouTube\Services\AuthService::class);
+$url = $authService->getAuthUrl();
+echo $url;
+
+# Visit the URL in browser, authorize with Google
+# After callback, the token is stored in database
+# All future API uploads will automatically use and refresh this token!
 ```
 
 ## 📚 Comprehensive Documentation
@@ -315,43 +384,6 @@ $updated = YouTube::forUser(auth()->id())->updateVideo('video-id', [
 YouTube::forUser(auth()->id())->deleteVideo('video-id');
 ```
 
-### Playlist Management
-
-```php
-// Get playlists
-$playlists = YouTube::forUser(auth()->id())->getPlaylists([
-    'maxResults' => 50,
-    'mine' => true,
-]);
-
-// Create playlist
-$playlist = YouTube::forUser(auth()->id())->createPlaylist([
-    'title' => 'My Playlist',
-    'description' => 'A collection of videos',
-    'privacy_status' => 'public',
-    'tags' => ['playlist', 'collection'],
-]);
-
-// Update playlist
-YouTube::forUser(auth()->id())->updatePlaylist('playlist-id', [
-    'title' => 'Updated Playlist Title',
-    'description' => 'Updated description',
-    'privacy_status' => 'private',
-]);
-
-// Add video to playlist
-YouTube::forUser(auth()->id())->addToPlaylist('playlist-id', 'video-id', [
-    'position' => 0, // Optional: position in playlist
-    'note' => 'Added via API', // Optional: note
-]);
-
-// Remove from playlist
-YouTube::forUser(auth()->id())->removeFromPlaylist('playlist-id', 'playlist-item-id');
-
-// Delete playlist
-YouTube::forUser(auth()->id())->deletePlaylist('playlist-id');
-```
-
 ### Channel Management
 
 ```php
@@ -372,9 +404,6 @@ $videos = YouTube::forUser(auth()->id())->getChannelVideos('channel-id', [
     'maxResults' => 50,
     'order' => 'date',
 ]);
-
-// Get channel playlists
-$playlists = YouTube::forUser(auth()->id())->getChannelPlaylists('channel-id');
 
 // Switch between multiple channels
 $tokens = YouTubeToken::where('user_id', auth()->id())->get();
@@ -401,7 +430,6 @@ UploadVideoJob::dispatch(
         'privacy_status' => 'private',
     ],
     channelId: 'UC123456', // Optional: specific channel
-    playlistId: 'PLxxxxxx', // Optional: add to playlist
     thumbnailPath: '/path/to/thumbnail.jpg', // Optional
     notifyUrl: 'https://yourapp.com/webhook' // Optional: webhook
 )->onQueue('media');
@@ -438,18 +466,6 @@ GET    /api/youtube/upload/status/{id}   - Get upload status
 ```
 GET    /api/youtube/channel              - Get channel info
 GET    /api/youtube/channel/videos       - List channel videos
-GET    /api/youtube/channel/playlists    - List channel playlists
-```
-
-#### Playlist Endpoints
-```
-GET    /api/youtube/playlists            - List playlists
-POST   /api/youtube/playlists            - Create playlist
-GET    /api/youtube/playlists/{id}       - Get playlist
-PUT    /api/youtube/playlists/{id}       - Update playlist
-DELETE /api/youtube/playlists/{id}       - Delete playlist
-POST   /api/youtube/playlists/{id}/videos - Add video
-DELETE /api/youtube/playlists/{id}/videos/{videoId} - Remove video
 ```
 
 ### Admin Panel
@@ -469,7 +485,6 @@ Features:
 - Video listing and management
 - Upload interface
 - Channel statistics
-- Playlist management
 - Upload history
 
 ### Advanced Features

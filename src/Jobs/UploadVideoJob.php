@@ -110,17 +110,6 @@ class UploadVideoJob implements ShouldQueue
                 'title' => $uploadedVideo->title,
             ]);
 
-            // Add to playlist if specified
-            if ($this->upload->playlist_id) {
-                try {
-                    $youtube->addToPlaylist($this->upload->playlist_id, $uploadedVideo->video_id);
-                    Log::info("Video added to playlist {$this->upload->playlist_id}");
-                } catch (Exception $e) {
-                    Log::error('Failed to add video to playlist: ' . $e->getMessage());
-                    // Don't fail the job if playlist addition fails
-                }
-            }
-
             // Mark upload as completed
             $this->upload->markAsCompleted($uploadedVideo->video_id);
 

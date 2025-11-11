@@ -88,6 +88,55 @@ class YouTubeService
     }
 
     /**
+     * Use the default token (useful for API/background jobs without user context)
+     *
+     * @return $this
+     *
+     * @throws TokenException
+     */
+    public function usingDefault(?string $channelId = null): self
+    {
+        $query = YouTubeToken::where('is_active', true);
+
+        if ($channelId) {
+            $query->where('channel_id', $channelId);
+        }
+
+        $token = $query->orderBy('last_refreshed_at', 'desc')->first();
+
+        if (! $token) {
+            throw new TokenException('No active YouTube token found');
+        }
+
+        $this->setActiveToken($token);
+
+        return $this;
+    }
+
+    /**
+     * Use a specific channel by channel ID (without requiring user ID)
+     *
+     * @return $this
+     *
+     * @throws TokenException
+     */
+    public function forChannel(string $channelId): self
+    {
+        $token = YouTubeToken::where('channel_id', $channelId)
+            ->where('is_active', true)
+            ->orderBy('last_refreshed_at', 'desc')
+            ->first();
+
+        if (! $token) {
+            throw new TokenException("No active YouTube token found for channel: {$channelId}");
+        }
+
+        $this->setActiveToken($token);
+
+        return $this;
+    }
+
+    /**
      * Set the active token and initialize YouTube service
      *
      * @throws TokenException
@@ -546,121 +595,6 @@ class YouTubeService
     }
 
     /**
-     * Get playlists
-     *
-     * @throws YouTubeException
-     */
-    public function getPlaylists(array $options = []): array
-    {
-        $this->ensureAuthenticated();
-
-        $defaults = [
-            'maxResults' => 50,
-            'mine' => true,
-        ];
-
-        $params = array_merge($defaults, $options);
-
-        try {
-            $response = $this->youtube->playlists->listPlaylists('snippet,contentDetails,status', $params);
-
-            $playlists = [];
-            foreach ($response->getItems() as $playlist) {
-                $playlists[] = $this->formatPlaylistData($playlist);
-            }
-
-            return [
-                'playlists' => $playlists,
-                'nextPageToken' => $response->getNextPageToken(),
-                'prevPageToken' => $response->getPrevPageToken(),
-                'totalResults' => $response->getPageInfo()->getTotalResults(),
-            ];
-        } catch (\Google_Service_Exception $e) {
-            throw $this->handleGoogleException($e);
-        }
-    }
-
-    /**
-     * Create a playlist
-     *
-     * @throws YouTubeException
-     */
-    public function createPlaylist(array $data): array
-    {
-        $this->ensureAuthenticated();
-
-        try {
-            $playlist = new \Google_Service_YouTube_Playlist;
-
-            $snippet = new \Google_Service_YouTube_PlaylistSnippet;
-            $snippet->setTitle($data['title']);
-            $snippet->setDescription($data['description'] ?? '');
-
-            if (isset($data['tags'])) {
-                $snippet->setTags($data['tags']);
-            }
-
-            $playlist->setSnippet($snippet);
-
-            if (isset($data['privacy_status'])) {
-                $status = new \Google_Service_YouTube_PlaylistStatus;
-                $status->setPrivacyStatus($data['privacy_status']);
-                $playlist->setStatus($status);
-            }
-
-            $createdPlaylist = $this->youtube->playlists->insert('snippet,status', $playlist);
-
-            Log::info('Playlist created successfully', [
-                'playlist_id' => $createdPlaylist->getId(),
-                'title' => $data['title'],
-            ]);
-
-            return $this->formatPlaylistData($createdPlaylist);
-        } catch (\Google_Service_Exception $e) {
-            throw $this->handleGoogleException($e);
-        }
-    }
-
-    /**
-     * Add video to playlist
-     *
-     * @throws YouTubeException
-     */
-    public function addToPlaylist(string $playlistId, string $videoId, ?int $position = null): bool
-    {
-        $this->ensureAuthenticated();
-
-        try {
-            $playlistItem = new \Google_Service_YouTube_PlaylistItem;
-
-            $snippet = new \Google_Service_YouTube_PlaylistItemSnippet;
-            $snippet->setPlaylistId($playlistId);
-
-            $resourceId = new \Google_Service_YouTube_ResourceId;
-            $resourceId->setKind('youtube#video');
-            $resourceId->setVideoId($videoId);
-            $snippet->setResourceId($resourceId);
-
-            if ($position !== null) {
-                $snippet->setPosition($position);
-            }
-
-            $playlistItem->setSnippet($snippet);
-
-            $this->youtube->playlistItems->insert('snippet', $playlistItem);
-
-            Log::info('Video added to playlist', [
-                'playlist_id' => $playlistId,
-                'video_id' => $videoId,
-            ]);
-
-            return true;
-        } catch (\Google_Service_Exception $e) {
-            throw $this->handleGoogleException($e);
-        }
-    }
-
-    /**
      * Ensure user is authenticated
      *
      * @throws YouTubeException
@@ -826,58 +760,6 @@ class YouTubeService
                 $data['licensed_content'] = $contentDetails->getLicensedContent();
                 $data['projection'] = $contentDetails->getProjection();
             }
-        }
-
-        return $data;
-    }
-
-    /**
-     * Format playlist data
-     *
-     * @param  mixed  $playlist
-     */
-    protected function formatPlaylistData($playlist): array
-    {
-        $snippet = $playlist->getSnippet();
-        $contentDetails = $playlist->getContentDetails();
-        $status = $playlist->getStatus();
-
-        $data = [
-            'id' => $playlist->getId(),
-        ];
-
-        // Add snippet data if available
-        if ($snippet) {
-            $data['title'] = $snippet->getTitle();
-            $data['description'] = $snippet->getDescription();
-            $data['published_at'] = $snippet->getPublishedAt();
-            $data['channel_id'] = $snippet->getChannelId();
-            $data['tags'] = $snippet->getTags();
-
-            // Add thumbnails if available
-            $thumbnails = $snippet->getThumbnails();
-            if ($thumbnails) {
-                $data['thumbnails'] = [];
-                if ($thumbnails->getDefault()) {
-                    $data['thumbnails']['default'] = $thumbnails->getDefault()->getUrl();
-                }
-                if ($thumbnails->getMedium()) {
-                    $data['thumbnails']['medium'] = $thumbnails->getMedium()->getUrl();
-                }
-                if ($thumbnails->getHigh()) {
-                    $data['thumbnails']['high'] = $thumbnails->getHigh()->getUrl();
-                }
-            }
-        }
-
-        // Add content details if available
-        if ($contentDetails) {
-            $data['item_count'] = $contentDetails->getItemCount();
-        }
-
-        // Add status if available
-        if ($status) {
-            $data['privacy_status'] = $status->getPrivacyStatus();
         }
 
         return $data;

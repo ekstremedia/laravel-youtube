@@ -73,7 +73,6 @@ laravel-youtube/
 │   │       ├── Api/             # API endpoints
 │   │       │   ├── UploadController.php
 │   │       │   ├── VideoController.php
-│   │       │   ├── PlaylistController.php
 │   │       │   └── ChannelController.php
 │   │       ├── Admin/           # Admin panel
 │   │       │   ├── DashboardController.php
@@ -150,9 +149,6 @@ laravel-youtube/
 - `updateVideo(string $videoId, array $metadata)` - Update metadata
 - `deleteVideo(string $videoId)` - Delete video
 - `setThumbnail(string $videoId, $thumbnail)` - Set custom thumbnail
-- `getPlaylists(array $options = [])` - List playlists
-- `createPlaylist(array $data)` - Create playlist
-- `addToPlaylist(string $playlistId, string $videoId)` - Add video to playlist
 - `getChannel(array $parts = [])` - Get channel info
 
 **Features**:
@@ -233,7 +229,6 @@ laravel-youtube/
 - Backoff: 1min, 5min, 15min (exponential)
 - Progress tracking with callbacks
 - Automatic thumbnail upload
-- Playlist addition
 - Webhook notifications
 - Automatic cleanup of temp files
 - Comprehensive error logging
@@ -368,7 +363,6 @@ Route::post('/api/pi/upload', function (Request $request) {
             'tags' => ['raspberry-pi', 'timelapse'],
             'privacy_status' => 'unlisted',
         ],
-        playlistId: 'YOUR_PLAYLIST_ID',
         notifyUrl: 'https://yourapp.com/webhook'
     )->onQueue('media');
 
@@ -459,15 +453,7 @@ YouTube::forUser(auth()->id())->updateVideo('video-id', [
 // Get channel info
 $channel = YouTube::forUser(auth()->id())->getChannel();
 
-// Create playlist
-$playlist = YouTube::forUser(auth()->id())->createPlaylist([
-    'title' => 'My Playlist',
-    'privacy_status' => 'public',
-]);
 
-// Add to playlist
-YouTube::forUser(auth()->id())->addToPlaylist('playlist-id', 'video-id');
-```
 
 ### Environment Variables Template
 

@@ -2,7 +2,6 @@
 
 use Ekstremedia\LaravelYouTube\Http\Controllers\Admin\ChannelsController;
 use Ekstremedia\LaravelYouTube\Http\Controllers\Admin\DashboardController;
-use Ekstremedia\LaravelYouTube\Http\Controllers\Admin\PlaylistsController;
 use Ekstremedia\LaravelYouTube\Http\Controllers\Admin\TokensController;
 use Ekstremedia\LaravelYouTube\Http\Controllers\Admin\UploadController;
 use Ekstremedia\LaravelYouTube\Http\Controllers\Admin\VideosController;
@@ -37,15 +36,6 @@ Route::group([
     Route::get('/upload', [UploadController::class, 'index'])->name('upload.index');
     Route::post('/upload', [UploadController::class, 'store'])->name('upload.store');
     Route::get('/upload/progress/{id}', [UploadController::class, 'progress'])->name('upload.progress');
-
-    // Playlists management
-    Route::get('/playlists', [PlaylistsController::class, 'index'])->name('playlists.index');
-    Route::get('/playlists/create', [PlaylistsController::class, 'create'])->name('playlists.create');
-    Route::post('/playlists', [PlaylistsController::class, 'store'])->name('playlists.store');
-    Route::get('/playlists/{id}', [PlaylistsController::class, 'show'])->name('playlists.show');
-    Route::get('/playlists/{id}/edit', [PlaylistsController::class, 'edit'])->name('playlists.edit');
-    Route::put('/playlists/{id}', [PlaylistsController::class, 'update'])->name('playlists.update');
-    Route::delete('/playlists/{id}', [PlaylistsController::class, 'destroy'])->name('playlists.destroy');
 
     // Token management
     Route::get('/tokens', [TokensController::class, 'index'])->name('tokens.index');

@@ -400,10 +400,14 @@ class YouTubeService
 
             // Store video in database
             $videoModel = new YouTubeVideo;
+
+            // Set guarded fields individually (for security, these can't be mass-assigned)
+            $videoModel->user_id = $this->activeToken->user_id;
+            $videoModel->token_id = $this->activeToken->id;
+            $videoModel->video_id = $status['id'];
+
+            // Fill remaining fields (these are not guarded)
             $videoModel->fill([
-                'user_id' => $this->activeToken->user_id,
-                'token_id' => $this->activeToken->id,
-                'video_id' => $status['id'],
                 'channel_id' => $this->activeToken->channel_id,
                 'title' => $metadata['title'],
                 'description' => $metadata['description'] ?? '',
@@ -414,6 +418,7 @@ class YouTubeService
                 'upload_status' => 'uploaded',
                 'processing_status' => 'processing',
             ]);
+
             $videoModel->save();
 
             // Set thumbnail if provided

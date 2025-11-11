@@ -93,7 +93,7 @@ class UploadVideoJob implements ShouldQueue
                 $metadata,
                 [
                     'progress_callback' => function ($bytesUploaded, $totalBytes) {
-                        $progress = round(($bytesUploaded / $totalBytes) * 100);
+                        $progress = (int) round(($bytesUploaded / $totalBytes) * 100);
                         $this->upload->updateProgress($progress);
                         Log::debug("Upload progress: {$progress}%", [
                             'upload_id' => $this->upload->id,

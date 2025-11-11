@@ -6,7 +6,7 @@
 @section('content')
 <div class="max-w-3xl">
     <div class="glass rounded-xl p-6">
-        <form method="POST" action="{{ route('youtube.admin.upload.store') }}" enctype="multipart/form-data">
+        <form id="upload-form" method="POST" action="{{ route('youtube.admin.upload.store') }}" enctype="multipart/form-data" data-max-size="{{ $maxFileSize }}">
             @csrf
 
             <div class="space-y-6">
@@ -61,6 +61,19 @@
                 </div>
             </div>
         </form>
+
+        <!-- Upload Progress -->
+        <div id="upload-progress" class="hidden mt-6">
+            <div class="mb-2 flex justify-between items-center">
+                <span id="progress-text" class="text-sm text-purple-300">Uploading...</span>
+            </div>
+            <div class="w-full bg-purple-900/30 rounded-full h-3 border border-purple-700/50">
+                <div id="progress-bar" class="bg-gradient-to-r from-purple-600 to-purple-500 h-3 rounded-full text-xs text-white flex items-center justify-center transition-all duration-300" style="width: 0%">0%</div>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div id="status-message" class="hidden"></div>
     </div>
 
     @if($recentUploads->count() > 0)
@@ -81,3 +94,7 @@
     @endif
 </div>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('vendor/youtube/js/upload.js') }}"></script>
+@endpush

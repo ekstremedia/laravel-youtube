@@ -774,50 +774,58 @@ class YouTubeService
 
         if (method_exists($video, 'getSnippet')) {
             $snippet = $video->getSnippet();
-            $data['title'] = $snippet->getTitle();
-            $data['description'] = $snippet->getDescription();
-            $data['published_at'] = $snippet->getPublishedAt();
-            $data['channel_id'] = $snippet->getChannelId();
-            $data['tags'] = $snippet->getTags();
-            $data['category_id'] = $snippet->getCategoryId();
+            if ($snippet) {
+                $data['title'] = $snippet->getTitle();
+                $data['description'] = $snippet->getDescription();
+                $data['published_at'] = $snippet->getPublishedAt();
+                $data['channel_id'] = $snippet->getChannelId();
+                $data['tags'] = $snippet->getTags();
+                $data['category_id'] = $snippet->getCategoryId();
 
-            if ($snippet->getThumbnails()) {
-                $data['thumbnails'] = [
-                    'default' => $snippet->getThumbnails()->getDefault() ? $snippet->getThumbnails()->getDefault()->getUrl() : null,
-                    'medium' => $snippet->getThumbnails()->getMedium() ? $snippet->getThumbnails()->getMedium()->getUrl() : null,
-                    'high' => $snippet->getThumbnails()->getHigh() ? $snippet->getThumbnails()->getHigh()->getUrl() : null,
-                    'standard' => $snippet->getThumbnails()->getStandard() ? $snippet->getThumbnails()->getStandard()->getUrl() : null,
-                    'maxres' => $snippet->getThumbnails()->getMaxres() ? $snippet->getThumbnails()->getMaxres()->getUrl() : null,
-                ];
+                if ($snippet->getThumbnails()) {
+                    $data['thumbnails'] = [
+                        'default' => $snippet->getThumbnails()->getDefault() ? $snippet->getThumbnails()->getDefault()->getUrl() : null,
+                        'medium' => $snippet->getThumbnails()->getMedium() ? $snippet->getThumbnails()->getMedium()->getUrl() : null,
+                        'high' => $snippet->getThumbnails()->getHigh() ? $snippet->getThumbnails()->getHigh()->getUrl() : null,
+                        'standard' => $snippet->getThumbnails()->getStandard() ? $snippet->getThumbnails()->getStandard()->getUrl() : null,
+                        'maxres' => $snippet->getThumbnails()->getMaxres() ? $snippet->getThumbnails()->getMaxres()->getUrl() : null,
+                    ];
+                }
             }
         }
 
         if (method_exists($video, 'getStatistics')) {
             $statistics = $video->getStatistics();
-            $data['view_count'] = $statistics->getViewCount();
-            $data['like_count'] = $statistics->getLikeCount();
-            $data['dislike_count'] = $statistics->getDislikeCount();
-            $data['comment_count'] = $statistics->getCommentCount();
+            if ($statistics) {
+                $data['view_count'] = $statistics->getViewCount();
+                $data['like_count'] = $statistics->getLikeCount();
+                $data['dislike_count'] = $statistics->getDislikeCount();
+                $data['comment_count'] = $statistics->getCommentCount();
+            }
         }
 
         if (method_exists($video, 'getStatus')) {
             $status = $video->getStatus();
-            $data['privacy_status'] = $status->getPrivacyStatus();
-            $data['embeddable'] = $status->getEmbeddable();
-            $data['license'] = $status->getLicense();
-            $data['made_for_kids'] = $status->getMadeForKids();
-            $data['upload_status'] = $status->getUploadStatus();
-            $data['failure_reason'] = $status->getFailureReason();
-            $data['rejection_reason'] = $status->getRejectionReason();
+            if ($status) {
+                $data['privacy_status'] = $status->getPrivacyStatus();
+                $data['embeddable'] = $status->getEmbeddable();
+                $data['license'] = $status->getLicense();
+                $data['made_for_kids'] = $status->getMadeForKids();
+                $data['upload_status'] = $status->getUploadStatus();
+                $data['failure_reason'] = $status->getFailureReason();
+                $data['rejection_reason'] = $status->getRejectionReason();
+            }
         }
 
         if (method_exists($video, 'getContentDetails')) {
             $contentDetails = $video->getContentDetails();
-            $data['duration'] = $contentDetails->getDuration();
-            $data['definition'] = $contentDetails->getDefinition();
-            $data['caption'] = $contentDetails->getCaption();
-            $data['licensed_content'] = $contentDetails->getLicensedContent();
-            $data['projection'] = $contentDetails->getProjection();
+            if ($contentDetails) {
+                $data['duration'] = $contentDetails->getDuration();
+                $data['definition'] = $contentDetails->getDefinition();
+                $data['caption'] = $contentDetails->getCaption();
+                $data['licensed_content'] = $contentDetails->getLicensedContent();
+                $data['projection'] = $contentDetails->getProjection();
+            }
         }
 
         return $data;
@@ -834,20 +842,44 @@ class YouTubeService
         $contentDetails = $playlist->getContentDetails();
         $status = $playlist->getStatus();
 
-        return [
+        $data = [
             'id' => $playlist->getId(),
-            'title' => $snippet->getTitle(),
-            'description' => $snippet->getDescription(),
-            'published_at' => $snippet->getPublishedAt(),
-            'channel_id' => $snippet->getChannelId(),
-            'tags' => $snippet->getTags(),
-            'thumbnails' => [
-                'default' => $snippet->getThumbnails()->getDefault()->getUrl(),
-                'medium' => $snippet->getThumbnails()->getMedium()->getUrl(),
-                'high' => $snippet->getThumbnails()->getHigh()->getUrl(),
-            ],
-            'item_count' => $contentDetails->getItemCount(),
-            'privacy_status' => $status->getPrivacyStatus(),
         ];
+
+        // Add snippet data if available
+        if ($snippet) {
+            $data['title'] = $snippet->getTitle();
+            $data['description'] = $snippet->getDescription();
+            $data['published_at'] = $snippet->getPublishedAt();
+            $data['channel_id'] = $snippet->getChannelId();
+            $data['tags'] = $snippet->getTags();
+
+            // Add thumbnails if available
+            $thumbnails = $snippet->getThumbnails();
+            if ($thumbnails) {
+                $data['thumbnails'] = [];
+                if ($thumbnails->getDefault()) {
+                    $data['thumbnails']['default'] = $thumbnails->getDefault()->getUrl();
+                }
+                if ($thumbnails->getMedium()) {
+                    $data['thumbnails']['medium'] = $thumbnails->getMedium()->getUrl();
+                }
+                if ($thumbnails->getHigh()) {
+                    $data['thumbnails']['high'] = $thumbnails->getHigh()->getUrl();
+                }
+            }
+        }
+
+        // Add content details if available
+        if ($contentDetails) {
+            $data['item_count'] = $contentDetails->getItemCount();
+        }
+
+        // Add status if available
+        if ($status) {
+            $data['privacy_status'] = $status->getPrivacyStatus();
+        }
+
+        return $data;
     }
 }

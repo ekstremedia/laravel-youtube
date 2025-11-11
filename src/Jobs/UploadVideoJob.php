@@ -3,6 +3,7 @@
 namespace Ekstremedia\LaravelYouTube\Jobs;
 
 use Ekstremedia\LaravelYouTube\Facades\YouTube;
+use Ekstremedia\LaravelYouTube\Models\YouTubeUpload;
 use Ekstremedia\LaravelYouTube\Models\YouTubeVideo;
 use Exception;
 use Illuminate\Bus\Queueable;
@@ -12,6 +13,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class UploadVideoJob implements ShouldQueue
 {
@@ -39,15 +41,9 @@ class UploadVideoJob implements ShouldQueue
      * Create a new job instance.
      */
     public function __construct(
-        public int $userId,
-        public string $videoPath,
-        public array $metadata,
-        public ?string $channelId = null,
-        public ?string $playlistId = null,
-        public ?string $thumbnailPath = null,
-        public ?string $notifyUrl = null
+        public YouTubeUpload $upload
     ) {
-        $this->onQueue('media');
+        $this->onQueue(config('youtube.queue.name', 'default'));
     }
 
     /**
@@ -56,28 +52,53 @@ class UploadVideoJob implements ShouldQueue
     public function handle(): void
     {
         try {
-            Log::info("Starting YouTube upload job for user {$this->userId}", [
-                'video_path' => $this->videoPath,
-                'metadata' => $this->metadata,
+            // Mark upload as started
+            $this->upload->markAsStarted();
+
+            $videoPath = Storage::disk('local')->path($this->upload->file_path);
+
+            Log::info("Starting YouTube upload job for user {$this->upload->user_id}", [
+                'upload_id' => $this->upload->id,
+                'video_path' => $videoPath,
+                'title' => $this->upload->title,
             ]);
 
             // Check if file exists
-            if (! file_exists($this->videoPath)) {
-                throw new Exception("Video file not found: {$this->videoPath}");
+            if (! file_exists($videoPath)) {
+                throw new Exception("Video file not found: {$videoPath}");
+            }
+
+            // Get the token for this upload
+            $token = $this->upload->token;
+            if (! $token) {
+                throw new Exception('YouTube token not found for this upload');
             }
 
             // Initialize YouTube service for the user
-            $youtube = YouTube::forUser($this->userId, $this->channelId);
+            $youtube = YouTube::forUser($this->upload->user_id, $token->channel_id);
+
+            // Prepare metadata
+            $metadata = [
+                'title' => $this->upload->title,
+                'description' => $this->upload->description ?? '',
+                'tags' => is_array($this->upload->tags) ? $this->upload->tags : [],
+                'privacy_status' => $this->upload->privacy_status ?? 'private',
+                'category_id' => $this->upload->category_id,
+            ];
+
+            // Mark as processing
+            $this->upload->markAsProcessing();
 
             // Upload the video with progress tracking
             $uploadedVideo = $youtube->uploadVideo(
-                $this->videoPath,
-                $this->metadata,
+                $videoPath,
+                $metadata,
                 [
-                    'notify_url' => $this->notifyUrl,
                     'progress_callback' => function ($bytesUploaded, $totalBytes) {
                         $progress = round(($bytesUploaded / $totalBytes) * 100);
+                        $this->upload->updateProgress($progress);
                         Log::debug("Upload progress: {$progress}%", [
+                            'upload_id' => $this->upload->id,
                             'bytes_uploaded' => $bytesUploaded,
                             'total_bytes' => $totalBytes,
                         ]);
@@ -86,90 +107,41 @@ class UploadVideoJob implements ShouldQueue
             );
 
             Log::info('Video uploaded successfully', [
+                'upload_id' => $this->upload->id,
                 'video_id' => $uploadedVideo->video_id,
                 'title' => $uploadedVideo->title,
             ]);
 
-            // Set thumbnail if provided
-            if ($this->thumbnailPath && file_exists($this->thumbnailPath)) {
-                try {
-                    $youtube->setThumbnail($uploadedVideo->video_id, $this->thumbnailPath);
-                    Log::info("Thumbnail set successfully for video {$uploadedVideo->video_id}");
-                } catch (Exception $e) {
-                    Log::error('Failed to set thumbnail: ' . $e->getMessage());
-                    // Don't fail the job if thumbnail upload fails
-                }
-            }
-
             // Add to playlist if specified
-            if ($this->playlistId) {
+            if ($this->upload->playlist_id) {
                 try {
-                    $youtube->addToPlaylist($this->playlistId, $uploadedVideo->video_id);
-                    Log::info("Video added to playlist {$this->playlistId}");
+                    $youtube->addToPlaylist($this->upload->playlist_id, $uploadedVideo->video_id);
+                    Log::info("Video added to playlist {$this->upload->playlist_id}");
                 } catch (Exception $e) {
                     Log::error('Failed to add video to playlist: ' . $e->getMessage());
                     // Don't fail the job if playlist addition fails
                 }
             }
 
-            // Notify webhook if provided
-            if ($this->notifyUrl) {
-                $this->notifyWebhook($uploadedVideo);
-            }
+            // Mark upload as completed
+            $this->upload->markAsCompleted($uploadedVideo->video_id);
 
-            // Clean up temporary file if it's in temp directory
-            if (str_contains($this->videoPath, 'temp') || str_contains($this->videoPath, 'tmp')) {
-                @unlink($this->videoPath);
-                if ($this->thumbnailPath) {
-                    @unlink($this->thumbnailPath);
-                }
-            }
+            // Clean up temporary file
+            Storage::disk('local')->delete($this->upload->file_path);
 
         } catch (Exception $e) {
             Log::error('YouTube upload job failed', [
-                'user_id' => $this->userId,
-                'video_path' => $this->videoPath,
+                'upload_id' => $this->upload->id,
+                'user_id' => $this->upload->user_id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            // Mark upload as failed
+            $this->upload->markAsFailed($e->getMessage());
+
             // Rethrow to trigger retry mechanism
             throw $e;
-        }
-    }
-
-    /**
-     * Notify webhook about upload completion.
-     */
-    protected function notifyWebhook(YouTubeVideo $video): void
-    {
-        try {
-            $payload = [
-                'status' => 'completed',
-                'video_id' => $video->video_id,
-                'title' => $video->title,
-                'watch_url' => $video->watch_url,
-                'privacy_status' => $video->privacy_status,
-                'uploaded_at' => $video->created_at->toIso8601String(),
-            ];
-
-            $response = Http::timeout(10)
-                ->retry(3, 100)
-                ->post($this->notifyUrl, $payload);
-
-            if ($response->successful()) {
-                Log::info('Webhook notified successfully', ['url' => $this->notifyUrl]);
-            } else {
-                Log::warning('Webhook notification failed', [
-                    'url' => $this->notifyUrl,
-                    'status' => $response->status(),
-                ]);
-            }
-        } catch (Exception $e) {
-            Log::error('Failed to notify webhook', [
-                'url' => $this->notifyUrl,
-                'error' => $e->getMessage(),
-            ]);
         }
     }
 
@@ -179,35 +151,24 @@ class UploadVideoJob implements ShouldQueue
     public function failed(?Exception $exception): void
     {
         Log::error('YouTube upload job permanently failed', [
-            'user_id' => $this->userId,
-            'video_path' => $this->videoPath,
-            'metadata' => $this->metadata,
+            'upload_id' => $this->upload->id,
+            'user_id' => $this->upload->user_id,
+            'title' => $this->upload->title,
             'error' => $exception ? $exception->getMessage() : 'Unknown error',
         ]);
 
-        // Notify webhook about failure if provided
-        if ($this->notifyUrl) {
-            try {
-                Http::timeout(10)->post($this->notifyUrl, [
-                    'status' => 'failed',
-                    'error' => $exception ? $exception->getMessage() : 'Unknown error',
-                    'video_path' => basename($this->videoPath),
-                ]);
-            } catch (Exception $e) {
-                Log::error('Failed to notify webhook about failure', [
-                    'url' => $this->notifyUrl,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
+        // Mark upload as failed
+        $this->upload->markAsFailed($exception ? $exception->getMessage() : 'Unknown error');
 
-        // Clean up temporary files
-        if (file_exists($this->videoPath) &&
-            (str_contains($this->videoPath, 'temp') || str_contains($this->videoPath, 'tmp'))) {
-            @unlink($this->videoPath);
-            if ($this->thumbnailPath) {
-                @unlink($this->thumbnailPath);
-            }
+        // Clean up temporary file
+        try {
+            Storage::disk('local')->delete($this->upload->file_path);
+        } catch (Exception $e) {
+            Log::warning('Failed to delete temporary file', [
+                'upload_id' => $this->upload->id,
+                'file_path' => $this->upload->file_path,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -224,6 +185,6 @@ class UploadVideoJob implements ShouldQueue
      */
     public function tags(): array
     {
-        return ['youtube', 'upload', "user:{$this->userId}"];
+        return ['youtube', 'upload', "user:{$this->upload->user_id}", "upload:{$this->upload->id}"];
     }
 }

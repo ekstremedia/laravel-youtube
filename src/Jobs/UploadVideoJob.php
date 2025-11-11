@@ -4,14 +4,12 @@ namespace Ekstremedia\LaravelYouTube\Jobs;
 
 use Ekstremedia\LaravelYouTube\Facades\YouTube;
 use Ekstremedia\LaravelYouTube\Models\YouTubeUpload;
-use Ekstremedia\LaravelYouTube\Models\YouTubeVideo;
 use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 

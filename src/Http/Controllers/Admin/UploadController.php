@@ -3,13 +3,12 @@
 namespace Ekstremedia\LaravelYouTube\Http\Controllers\Admin;
 
 use Ekstremedia\LaravelYouTube\Http\Controllers\Controller;
-use Ekstremedia\LaravelYouTube\Models\YouTubeToken;
-use Ekstremedia\LaravelYouTube\Models\YouTubeVideo;
-use Ekstremedia\LaravelYouTube\Models\YouTubeUpload;
-use Ekstremedia\LaravelYouTube\Services\YouTubeService;
 use Ekstremedia\LaravelYouTube\Jobs\UploadVideoJob;
+use Ekstremedia\LaravelYouTube\Models\YouTubeToken;
+use Ekstremedia\LaravelYouTube\Models\YouTubeUpload;
+use Ekstremedia\LaravelYouTube\Models\YouTubeVideo;
+use Ekstremedia\LaravelYouTube\Services\YouTubeService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -193,7 +192,7 @@ class UploadController extends Controller
             }
 
             // Determine overall status for frontend
-            $response['status'] = match($upload->upload_status) {
+            $response['status'] = match ($upload->upload_status) {
                 'pending' => 'processing',
                 'uploading' => 'uploading',
                 'processing' => 'uploading',
@@ -218,7 +217,7 @@ class UploadController extends Controller
      */
     private function getStatusMessage(YouTubeUpload $upload): string
     {
-        return match($upload->upload_status) {
+        return match ($upload->upload_status) {
             'pending' => 'Preparing upload...',
             'uploading' => 'Uploading to YouTube...',
             'processing' => 'Processing video...',
@@ -233,7 +232,7 @@ class UploadController extends Controller
      */
     private function calculateProgress(YouTubeUpload $upload): int
     {
-        return match($upload->upload_status) {
+        return match ($upload->upload_status) {
             'pending' => 25,
             'uploading' => 50,
             'processing' => 75,

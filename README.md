@@ -14,13 +14,17 @@ A comprehensive Laravel package for YouTube API v3 integration with OAuth2 authe
 ### Core Features
 - 🔐 **OAuth2 Authentication** - Secure authentication with automatic token refresh
 - 📹 **Video Management** - Complete CRUD operations for videos
-- 📤 **Advanced Upload** - Chunked uploads with progress tracking
+- 📤 **Advanced Upload** - Chunked uploads with progress tracking & 15+ metadata fields
 - 📺 **Channel Management** - Designed for single-user/single-channel applications
 - 🎨 **Thumbnail Management** - Custom thumbnail upload support
+- 🎬 **Playlist Operations** - Create, manage, and organize video playlists
+- 💬 **Caption/Subtitle Support** - Upload, manage, and download captions in multiple formats
+- 📍 **Location & Recording Details** - Geotag videos with coordinates and recording dates
 - 🔄 **Queue Support** - Background video uploads via Laravel jobs
 - 🎯 **Rate Limiting** - Built-in rate limiting to respect API quotas
 - 📊 **Statistics Tracking** - View counts, likes, and engagement metrics
 - 🌐 **Webhook Support** - Upload completion notifications
+- 📅 **Scheduled Publishing** - Schedule videos for future publication
 
 ### Special Features
 - 🥧 **Raspberry Pi Integration** - Optimized for automated uploads from IoT devices
@@ -343,19 +347,40 @@ $video = YouTube::forUser(auth()->id())->uploadVideo(
     ]
 );
 
-// Advanced upload with options
+// Advanced upload with all metadata options
 $video = YouTube::forUser(auth()->id())->uploadVideo(
     '/path/to/large-video.mp4',
     [
+        // Basic metadata
         'title' => 'Large Video Upload',
         'description' => 'Testing chunked upload',
         'tags' => ['large', 'chunked'],
+        'category_id' => '22',
+
+        // Privacy & Status
+        'privacy_status' => 'private',
         'made_for_kids' => false,
+        'self_declared_made_for_kids' => false,
         'embeddable' => true,
+        'public_stats_viewable' => true,
+        'publish_at' => '2024-12-31T12:00:00Z', // Scheduled publishing
+
+        // License & Language
         'license' => 'creativeCommon',
-        'recording_date' => '2024-01-15T10:00:00Z',
         'default_language' => 'en',
-        'default_audio_language' => 'en',
+        'default_audio_language' => 'en-US',
+
+        // Recording details (great for travel vlogs, security cameras)
+        'recording_date' => '2024-01-15T10:00:00Z',
+        'location' => [
+            'latitude' => 59.9139,
+            'longitude' => 10.7522,
+            'altitude' => 100.0,
+            'description' => 'Oslo, Norway',
+        ],
+
+        // Custom thumbnail
+        'thumbnail' => '/path/to/thumbnail.jpg',
     ],
     [
         'chunk_size' => 50 * 1024 * 1024, // 50MB chunks
@@ -365,12 +390,6 @@ $video = YouTube::forUser(auth()->id())->uploadVideo(
             Log::info("Upload progress: {$percent}%");
         }
     ]
-);
-
-// Set custom thumbnail
-YouTube::forUser(auth()->id())->setThumbnail(
-    $video->video_id,
-    $request->file('thumbnail')
 );
 ```
 
@@ -436,6 +455,81 @@ foreach ($tokens as $token) {
     $channel = $youtube->getChannel();
     echo "Channel: {$channel['title']} ({$channel['subscriberCount']} subscribers)\n";
 }
+```
+
+### Playlist Management
+
+```php
+// Create a new playlist
+$playlist = YouTube::usingDefault()->createPlaylist('My Playlist', [
+    'description' => 'Collection of my favorite videos',
+    'privacy_status' => 'public', // private, public, unlisted
+    'tags' => ['favorites', 'collection'],
+]);
+
+// Get all playlists
+$result = YouTube::usingDefault()->getPlaylists();
+foreach ($result['playlists'] as $playlist) {
+    echo "{$playlist['title']} - {$playlist['item_count']} videos\n";
+}
+
+// Add video to playlist
+YouTube::usingDefault()->addVideoToPlaylist(
+    'video-id',
+    'playlist-id',
+    0 // Position (0 = first)
+);
+
+// Get videos in a playlist
+$result = YouTube::usingDefault()->getPlaylistVideos('playlist-id');
+foreach ($result['videos'] as $video) {
+    echo "{$video['title']} (position: {$video['position']})\n";
+}
+
+// Update playlist
+YouTube::usingDefault()->updatePlaylist('playlist-id', [
+    'title' => 'Updated Title',
+    'privacy_status' => 'public',
+]);
+
+// Delete playlist
+YouTube::usingDefault()->deletePlaylist('playlist-id');
+```
+
+### Caption/Subtitle Management
+
+```php
+// Upload captions (supports SRT, VTT, TTML, SBV)
+$caption = YouTube::usingDefault()->uploadCaption(
+    'video-id',
+    'en', // Language code
+    '/path/to/captions.srt',
+    [
+        'name' => 'English Subtitles',
+        'is_draft' => false,
+    ]
+);
+
+// List all captions for a video
+$captions = YouTube::usingDefault()->getCaptions('video-id');
+foreach ($captions as $caption) {
+    echo "{$caption['name']} ({$caption['language']})\n";
+}
+
+// Update caption metadata or file
+YouTube::usingDefault()->updateCaption(
+    'caption-id',
+    ['name' => 'Updated English'],
+    '/path/to/new-captions.srt' // Optional: new file
+);
+
+// Download captions in different formats
+$srt = YouTube::usingDefault()->downloadCaption('caption-id', 'srt');
+$vtt = YouTube::usingDefault()->downloadCaption('caption-id', 'vtt');
+file_put_contents('captions.srt', $srt);
+
+// Delete captions
+YouTube::usingDefault()->deleteCaption('caption-id');
 ```
 
 ### Background Jobs & Queues

@@ -88,14 +88,38 @@ use EkstreMedia\LaravelYouTube\Facades\YouTube;
 $video = YouTube::usingDefault()->uploadVideo(
     $file, // File path, UploadedFile, or resource
     [
+        // Basic metadata
         'title' => 'Video Title',
         'description' => 'Video description',
         'tags' => ['tag1', 'tag2'],
         'category_id' => '22',
+
+        // Privacy & Status
         'privacy_status' => 'private', // private, unlisted, public
         'made_for_kids' => false,
+        'self_declared_made_for_kids' => false,
         'embeddable' => true,
+        'public_stats_viewable' => true,
+        'publish_at' => '2024-12-31T12:00:00Z', // Scheduled publishing
+
+        // License
         'license' => 'youtube', // youtube or creativeCommon
+
+        // Language
+        'default_language' => 'en',
+        'default_audio_language' => 'en-US',
+
+        // Recording details (optional)
+        'recording_date' => '2024-01-15T10:30:00Z',
+        'location' => [
+            'latitude' => 59.9139,
+            'longitude' => 10.7522,
+            'altitude' => 100.0, // Optional
+            'description' => 'Oslo, Norway', // Optional
+        ],
+
+        // Thumbnail (optional)
+        'thumbnail' => '/path/to/thumbnail.jpg',
     ],
     [
         'chunk_size' => 10 * 1024 * 1024, // Optional: 10MB chunks
@@ -109,6 +133,27 @@ $video = YouTube::usingDefault()->uploadVideo(
 echo $video->video_id; // YouTube video ID
 echo $video->watch_url; // https://www.youtube.com/watch?v=...
 ```
+
+**Available Metadata Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string | **Required.** Video title (max 100 chars) |
+| `description` | string | Video description (max 5000 chars) |
+| `tags` | array | Video tags (max 500 tags, 500 chars each) |
+| `category_id` | string | YouTube category ID (default: 22) |
+| `privacy_status` | string | private, unlisted, or public (default: private) |
+| `made_for_kids` | boolean | Whether video is made for kids |
+| `self_declared_made_for_kids` | boolean | Self-declared kid-friendly status |
+| `embeddable` | boolean | Allow video embedding (default: true) |
+| `public_stats_viewable` | boolean | Show public statistics (default: true) |
+| `publish_at` | string | ISO 8601 date for scheduled publishing |
+| `license` | string | youtube or creativeCommon (default: youtube) |
+| `default_language` | string | Primary language code (e.g., 'en') |
+| `default_audio_language` | string | Audio language code (e.g., 'en-US') |
+| `recording_date` | string | ISO 8601 date of recording |
+| `location` | array | Recording location (lat, lon, altitude, description) |
+| `thumbnail` | string/UploadedFile | Custom thumbnail image |
 
 ### Get Videos
 
@@ -166,6 +211,179 @@ YouTube::usingDefault()->setThumbnail(
     'video-id',
     $thumbnailFile // File path, UploadedFile, or resource
 );
+```
+
+## Playlist Operations
+
+### Create Playlist
+
+```php
+$playlist = YouTube::usingDefault()->createPlaylist('My Playlist', [
+    'description' => 'Playlist description',
+    'tags' => ['tag1', 'tag2'],
+    'privacy_status' => 'private', // private, public, unlisted
+    'default_language' => 'en',
+]);
+
+// Returns array with playlist details
+echo $playlist['id']; // Playlist ID
+echo $playlist['title'];
+echo $playlist['privacy_status'];
+```
+
+### Get Playlists
+
+```php
+$result = YouTube::usingDefault()->getPlaylists([
+    'maxResults' => 50,
+]);
+
+foreach ($result['playlists'] as $playlist) {
+    echo "{$playlist['title']} - {$playlist['item_count']} videos\n";
+}
+
+// Pagination
+$nextPage = YouTube::usingDefault()->getPlaylists([
+    'pageToken' => $result['nextPageToken'],
+]);
+```
+
+### Get Single Playlist
+
+```php
+$playlist = YouTube::usingDefault()->getPlaylist('PLxxxxxxxxxxxxxx');
+
+echo $playlist['title'];
+echo $playlist['description'];
+echo $playlist['item_count'];
+```
+
+### Update Playlist
+
+```php
+$updated = YouTube::usingDefault()->updatePlaylist('PLxxxxxxxxxxxxxx', [
+    'title' => 'Updated Title',
+    'description' => 'Updated description',
+    'tags' => ['updated', 'tags'],
+    'privacy_status' => 'public',
+]);
+```
+
+### Delete Playlist
+
+```php
+YouTube::usingDefault()->deletePlaylist('PLxxxxxxxxxxxxxx');
+```
+
+### Add Video to Playlist
+
+```php
+$result = YouTube::usingDefault()->addVideoToPlaylist(
+    'video-id',
+    'playlist-id',
+    0 // Optional: position in playlist (0 = first)
+);
+
+echo $result['id']; // Playlist item ID (needed for removal)
+echo $result['position'];
+```
+
+### Remove Video from Playlist
+
+```php
+// Use the playlist item ID (not the video ID)
+YouTube::usingDefault()->removeVideoFromPlaylist('playlist-item-id');
+```
+
+### Get Playlist Videos
+
+```php
+$result = YouTube::usingDefault()->getPlaylistVideos('PLxxxxxxxxxxxxxx', [
+    'maxResults' => 50,
+]);
+
+foreach ($result['videos'] as $video) {
+    echo "{$video['title']} - Position: {$video['position']}\n";
+    echo "Video ID: {$video['video_id']}\n";
+    echo "Playlist Item ID: {$video['playlist_item_id']}\n";
+}
+```
+
+## Caption/Subtitle Operations
+
+### Upload Captions
+
+```php
+$caption = YouTube::usingDefault()->uploadCaption(
+    'video-id',
+    'en', // Language code (ISO 639-1)
+    '/path/to/captions.srt', // SRT, VTT, TTML, or SBV file
+    [
+        'name' => 'English', // Optional: Display name
+        'is_draft' => false, // Optional: Draft status
+    ]
+);
+
+echo $caption['id']; // Caption track ID
+echo $caption['language'];
+```
+
+**Supported Caption Formats:**
+- SRT (SubRip)
+- VTT (WebVTT)
+- TTML (Timed Text Markup Language)
+- SBV (SubViewer)
+
+### List Captions
+
+```php
+$captions = YouTube::usingDefault()->getCaptions('video-id');
+
+foreach ($captions as $caption) {
+    echo "{$caption['name']} ({$caption['language']})\n";
+    echo "Track Kind: {$caption['track_kind']}\n";
+    echo "Is Draft: " . ($caption['is_draft'] ? 'Yes' : 'No') . "\n";
+    echo "Is CC: " . ($caption['is_cc'] ? 'Yes' : 'No') . "\n";
+    echo "Auto-synced: " . ($caption['is_auto_synced'] ? 'Yes' : 'No') . "\n";
+}
+```
+
+### Update Captions
+
+```php
+// Update metadata only
+$updated = YouTube::usingDefault()->updateCaption('caption-id', [
+    'name' => 'Updated English',
+    'is_draft' => false,
+]);
+
+// Update both metadata and caption file
+$updated = YouTube::usingDefault()->updateCaption(
+    'caption-id',
+    ['name' => 'Updated English'],
+    '/path/to/new-captions.srt' // New caption file
+);
+```
+
+### Delete Captions
+
+```php
+YouTube::usingDefault()->deleteCaption('caption-id');
+```
+
+### Download Captions
+
+```php
+// Download in SRT format (default)
+$srtContent = YouTube::usingDefault()->downloadCaption('caption-id');
+
+// Download in other formats
+$vttContent = YouTube::usingDefault()->downloadCaption('caption-id', 'vtt');
+$ttmlContent = YouTube::usingDefault()->downloadCaption('caption-id', 'ttml');
+$sbvContent = YouTube::usingDefault()->downloadCaption('caption-id', 'sbv');
+
+// Save to file
+file_put_contents('captions.srt', $srtContent);
 ```
 
 ## Channel Operations

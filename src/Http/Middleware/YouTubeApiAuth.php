@@ -27,11 +27,12 @@ class YouTubeApiAuth
             return $next($request);
         }
 
-        // Check for API key authentication
+        // Check for API key authentication (timing-safe comparison)
         $apiKey = config('youtube.security.api_key');
         $headerName = config('youtube.security.api_key_header', 'X-YouTube-API-Key');
+        $providedKey = (string) $request->header($headerName);
 
-        if ($apiKey && $request->header($headerName) === $apiKey) {
+        if ($apiKey && $providedKey && hash_equals($apiKey, $providedKey)) {
             return $next($request);
         }
 

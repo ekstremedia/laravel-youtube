@@ -116,6 +116,17 @@ class AuthController extends Controller
      */
     public function callback(Request $request): RedirectResponse
     {
+        // Security check: Verify that an OAuth flow was initiated by checking session
+        if (! Session::has('youtube_oauth_state')) {
+            Log::warning('YouTube OAuth callback without session state', [
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return redirect()->route('youtube.authorize')
+                ->with('error', 'OAuth session expired or invalid. Please try again.');
+        }
+
         // Check for errors
         if ($request->has('error')) {
             Log::error('YouTube OAuth error', [
@@ -177,8 +188,14 @@ class AuthController extends Controller
         $tokenId = $request->input('token_id');
 
         try {
-            // Find the token (single-user mode)
+            // Find the token
             $token = YouTubeToken::findOrFail($tokenId);
+
+            // Authorization check: In multi-user mode, only token owner can revoke
+            // In single-user mode (user_id = null), any authenticated user can revoke
+            if ($token->user_id !== null && $token->user_id !== Auth::id()) {
+                abort(403, 'Unauthorized to revoke this token');
+            }
 
             // Revoke token with YouTube
             $accessToken = $this->tokenManager->getAccessToken($token);

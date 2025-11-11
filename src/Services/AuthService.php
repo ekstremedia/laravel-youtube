@@ -109,14 +109,15 @@ class AuthService
      */
     public function exchangeCode(string $code, ?string $state = null): array
     {
-        // Verify state for CSRF protection
-        if ($state) {
-            $sessionState = Session::get('youtube_oauth_state');
-            if ($state !== $sessionState) {
-                throw new YouTubeAuthException('Invalid state parameter');
-            }
+        // Verify state for CSRF protection (MANDATORY)
+        $sessionState = Session::get('youtube_oauth_state');
+
+        if (! $state || ! $sessionState || $state !== $sessionState) {
             Session::forget('youtube_oauth_state');
+            throw new YouTubeAuthException('Invalid or missing state parameter. Please try again.');
         }
+
+        Session::forget('youtube_oauth_state');
 
         try {
             // Exchange code for tokens

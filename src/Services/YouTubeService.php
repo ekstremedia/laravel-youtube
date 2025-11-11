@@ -306,6 +306,9 @@ class YouTubeService
     {
         $this->ensureAuthenticated();
 
+        // Validate metadata
+        $this->validateVideoMetadata($metadata);
+
         // Prepare video path
         $videoPath = $video instanceof UploadedFile
             ? $video->getPathname()
@@ -314,6 +317,9 @@ class YouTubeService
         if (! file_exists($videoPath)) {
             throw new UploadException("Video file not found: {$videoPath}");
         }
+
+        // Validate file type
+        $this->validateVideoFile($videoPath);
 
         // Check file size
         $fileSize = filesize($videoPath);
@@ -763,5 +769,100 @@ class YouTubeService
         }
 
         return $data;
+    }
+
+    /**
+     * Validate video metadata before upload
+     *
+     *
+     * @throws UploadException
+     */
+    protected function validateVideoMetadata(array $metadata): void
+    {
+        // Title is required
+        if (empty($metadata['title'])) {
+            throw new UploadException('Video title is required');
+        }
+
+        // Validate title length (YouTube limit is 100 characters)
+        if (strlen($metadata['title']) > 100) {
+            throw new UploadException('Video title cannot exceed 100 characters');
+        }
+
+        // Validate description length (YouTube limit is 5000 characters)
+        if (isset($metadata['description']) && strlen($metadata['description']) > 5000) {
+            throw new UploadException('Video description cannot exceed 5000 characters');
+        }
+
+        // Validate tags
+        if (isset($metadata['tags'])) {
+            if (! is_array($metadata['tags'])) {
+                throw new UploadException('Tags must be an array');
+            }
+
+            foreach ($metadata['tags'] as $tag) {
+                if (strlen($tag) > 500) {
+                    throw new UploadException('Individual tags cannot exceed 500 characters');
+                }
+            }
+
+            if (count($metadata['tags']) > 500) {
+                throw new UploadException('Cannot have more than 500 tags');
+            }
+        }
+
+        // Validate privacy status
+        if (isset($metadata['privacy_status'])) {
+            $allowedStatuses = ['private', 'unlisted', 'public'];
+            if (! in_array($metadata['privacy_status'], $allowedStatuses)) {
+                throw new UploadException('Privacy status must be one of: ' . implode(', ', $allowedStatuses));
+            }
+        }
+
+        // Validate category ID (valid YouTube category IDs)
+        if (isset($metadata['category_id'])) {
+            $validCategories = [
+                '1', '2', '10', '15', '17', '18', '19', '20', '21', '22',
+                '23', '24', '25', '26', '27', '28', '29', '30', '31', '32',
+                '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44',
+            ];
+            if (! in_array($metadata['category_id'], $validCategories)) {
+                throw new UploadException('Invalid category ID');
+            }
+        }
+
+        // Validate boolean fields
+        if (isset($metadata['made_for_kids']) && ! is_bool($metadata['made_for_kids'])) {
+            throw new UploadException('made_for_kids must be a boolean value');
+        }
+
+        if (isset($metadata['embeddable']) && ! is_bool($metadata['embeddable'])) {
+            throw new UploadException('embeddable must be a boolean value');
+        }
+    }
+
+    /**
+     * Validate video file before upload
+     *
+     *
+     * @throws UploadException
+     */
+    protected function validateVideoFile(string $videoPath): void
+    {
+        // Validate MIME type
+        $mimeType = mime_content_type($videoPath);
+        $allowedMimeTypes = $this->config['security']['allowed_upload_mime_types'] ?? [];
+
+        if (! empty($allowedMimeTypes) && ! in_array($mimeType, $allowedMimeTypes)) {
+            throw new UploadException("Invalid file type: {$mimeType}. Only video files are allowed.");
+        }
+
+        // Validate file extension
+        $extension = strtolower(pathinfo($videoPath, PATHINFO_EXTENSION));
+        $allowedExtensions = $this->config['security']['allowed_upload_extensions'] ?? [];
+
+        if (! empty($allowedExtensions) && ! in_array($extension, $allowedExtensions)) {
+            throw new UploadException("Invalid file extension: {$extension}. Allowed: " . implode(', ', $allowedExtensions));
+        }
     }
 }

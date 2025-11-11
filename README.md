@@ -229,6 +229,27 @@ The package includes a simple authentication page for connecting your YouTube ch
 - One-click authorize/re-authorize
 - Automatic token refresh
 - Clean, simple interface
+- **Protected by authentication** - Requires logged-in user by default
+
+**Security:**
+
+By default, the authorization page is protected with the `auth` middleware. Only logged-in users can access it.
+
+To customize the middleware protection, publish and edit the config file:
+
+```php
+// config/youtube.php
+'routes' => [
+    'auth_page' => [
+        'middleware' => ['web', 'auth'], // Default: requires login
+
+        // Examples:
+        // 'middleware' => ['web', 'auth:admin'],           // Admin guard
+        // 'middleware' => ['web', 'can:manage-youtube'],  // Laravel Gate
+        // 'middleware' => ['web'],                         // No authentication
+    ],
+],
+```
 
 **Configuration:**
 ```env

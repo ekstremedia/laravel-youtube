@@ -20,58 +20,23 @@ class YouTubeVideo extends Model
     protected $table = 'youtube_videos';
 
     /**
-     * The attributes that are mass assignable.
+     * The attributes that are NOT mass assignable.
+     * Using guarded instead of fillable for better security.
+     * These fields should only be set by the system, not from user input.
      *
      * @var array<int, string>
      */
-    protected $fillable = [
-        'user_id',
-        'token_id',
-        'video_id',
-        'channel_id',
-        'title',
-        'description',
-        'tags',
-        'category_id',
-        'privacy_status',
-        'license',
-        'embeddable',
-        'public_stats_viewable',
-        'made_for_kids',
-        'default_language',
-        'default_audio_language',
-        'recording_date',
-        'video_url',
-        'embed_url',
-        'thumbnail_default',
-        'thumbnail_medium',
-        'thumbnail_high',
-        'thumbnail_standard',
-        'thumbnail_maxres',
-        'duration',
-        'definition',
-        'caption',
-        'licensed_content',
-        'projection',
-        'view_count',
-        'like_count',
-        'dislike_count',
-        'comment_count',
-        'upload_status',
-        'failure_reason',
-        'rejection_reason',
-        'processing_status',
-        'processing_progress',
-        'processing_details',
-        'published_at',
-        'scheduled_start_time',
-        'scheduled_end_time',
-        'actual_start_time',
-        'actual_end_time',
-        'live_streaming_details',
-        'statistics',
-        'metadata',
-        'synced_at',
+    protected $guarded = [
+        'id',              // Primary key
+        'user_id',         // Should be set by system only
+        'token_id',        // Should be set by system only
+        'video_id',        // Set once during creation from YouTube API
+        'view_count',      // From YouTube API only
+        'like_count',      // From YouTube API only
+        'dislike_count',   // From YouTube API only
+        'comment_count',   // From YouTube API only
+        'created_at',      // Timestamp
+        'updated_at',      // Timestamp
     ];
 
     /**

@@ -34,6 +34,25 @@ class AuthController extends Controller
     }
 
     /**
+     * Show the authentication page
+     */
+    public function index(Request $request)
+    {
+        $userId = Auth::id();
+
+        // Get all tokens for this user
+        $tokens = YouTubeToken::where('user_id', $userId)
+            ->where('is_active', true)
+            ->orderBy('last_refreshed_at', 'desc')
+            ->get();
+
+        return view('youtube::auth.authenticate', [
+            'tokens' => $tokens,
+            'hasTokens' => $tokens->count() > 0,
+        ]);
+    }
+
+    /**
      * Redirect user to YouTube OAuth authorization
      */
     public function redirect(Request $request): RedirectResponse

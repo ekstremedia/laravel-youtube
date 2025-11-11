@@ -77,6 +77,10 @@ YOUTUBE_REDIRECT_URI=https://yourdomain.com/youtube/callback
 YOUTUBE_ADMIN_ENABLED=true
 YOUTUBE_ADMIN_PREFIX=youtube-admin
 
+# Optional: Authentication Page
+YOUTUBE_AUTH_PAGE_ENABLED=true
+YOUTUBE_AUTH_PAGE_PATH=youtube-authenticate
+
 # Optional: Upload Settings
 YOUTUBE_UPLOAD_CHUNK_SIZE=10485760  # 10MB chunks
 YOUTUBE_UPLOAD_TIMEOUT=3600         # 1 hour
@@ -246,6 +250,40 @@ echo $url;
 ```
 
 ## 📚 Comprehensive Documentation
+
+### Authentication Page (Frontend)
+
+The package includes a ready-to-use authentication page where users can connect their YouTube channels:
+
+**Access the page:** `https://yourdomain.com/youtube-authenticate` (configurable)
+
+**Features:**
+- Beautiful, modern UI with glass morphism design
+- Shows all connected YouTube channels
+- One-click connect/disconnect
+- Token status and expiration info
+- Permissions overview
+
+**Configuration:**
+```env
+YOUTUBE_AUTH_PAGE_ENABLED=true
+YOUTUBE_AUTH_PAGE_PATH=youtube-authenticate
+```
+
+**Usage in your app:**
+```php
+// Link to authentication page
+<a href="{{ route('youtube.authenticate') }}">Connect YouTube</a>
+
+// Or use the configured path
+<a href="/{{ config('youtube.routes.auth_page.path') }}">Connect YouTube</a>
+```
+
+The page requires user authentication (configurable middleware). Users can:
+1. View all connected channels
+2. Connect new channels
+3. Disconnect existing channels
+4. See token expiration status
 
 ### Authentication & Token Management
 

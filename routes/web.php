@@ -14,3 +14,13 @@ Route::group([
     Route::post('/revoke', [AuthController::class, 'revoke'])->name('revoke')->middleware('auth');
     Route::get('/status', [AuthController::class, 'status'])->name('status')->middleware('auth');
 });
+
+// Authentication page route (configurable)
+if (config('youtube.routes.auth_page.enabled', true)) {
+    Route::get(
+        config('youtube.routes.auth_page.path', 'youtube-authenticate'),
+        [AuthController::class, 'index']
+    )
+        ->middleware(config('youtube.routes.auth_page.middleware', ['web', 'auth']))
+        ->name('youtube.authenticate');
+}

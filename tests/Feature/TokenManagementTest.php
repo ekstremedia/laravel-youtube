@@ -136,52 +136,6 @@ describe('Token Refresh', function () {
             ->and($tokenManager->needsRefresh($valid))->toBeFalse();
     });
 
-    it('refreshes access token using refresh token', function () {
-        $this->markTestSkipped('OAuth refresh requires Google Client mocking at lower level');
-
-        $authService = app(AuthService::class);
-        $tokenManager = app(TokenManager::class);
-
-        $token = YouTubeToken::factory()->create([
-            'refresh_token' => Crypt::encryptString('valid-refresh-token'),
-            'expires_at' => now()->subMinute(),
-            'refresh_count' => 0,
-        ]);
-
-        $newTokenData = $authService->refreshAccessToken('valid-refresh-token');
-        $tokenManager->updateToken($token, $newTokenData);
-
-        $token->refresh();
-
-        expect($token->refresh_count)->toBe(1)
-            ->and($token->last_refreshed_at)->not->toBeNull()
-            ->and($token->expires_at)->toBeGreaterThan(now());
-    });
-
-    it('marks token as failed when refresh fails', function () {
-        $this->markTestSkipped('OAuth refresh requires Google Client mocking at lower level');
-
-        $tokenManager = app(TokenManager::class);
-        $authService = app(AuthService::class);
-
-        $token = YouTubeToken::factory()->create([
-            'refresh_token' => Crypt::encryptString('invalid-refresh-token'),
-            'is_active' => true,
-        ]);
-
-        try {
-            $authService->refreshAccessToken('invalid-refresh-token');
-        } catch (\Exception $e) {
-            $tokenManager->markTokenFailed($token, $e->getMessage());
-        }
-
-        $token->refresh();
-
-        expect($token->is_active)->toBeFalse()
-            ->and($token->error)->not->toBeNull()
-            ->and($token->error_at)->not->toBeNull();
-    });
-
     it('automatically refreshes expiring tokens', function () {
         $tokenManager = app(TokenManager::class);
 
@@ -215,18 +169,6 @@ describe('OAuth Flow', function () {
 
         // Check that scopes are included (Google Client may encode them differently)
         expect($authUrl)->toMatch('/scope=.*youtube/');
-    });
-
-    it('exchanges authorization code for tokens', function () {
-        $this->markTestSkipped('OAuth code exchange requires Google Client mocking at lower level');
-    });
-
-    it('gets channel info after authentication', function () {
-        $this->markTestSkipped('YouTube API calls require Google Client mocking at lower level');
-    });
-
-    it('can revoke tokens', function () {
-        $this->markTestSkipped('OAuth token revocation requires Google Client mocking at lower level');
     });
 });
 

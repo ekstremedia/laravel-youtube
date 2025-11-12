@@ -5,11 +5,12 @@ All notable changes to `laravel-youtube` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased](https://github.com/ekstremedia/laravel-youtube/compare/v1.1.0 - First version released...HEAD)
 
-## [1.0.0] - 2025-11-12
+## [1.0.0](https://github.com/ekstremedia/laravel-youtube/releases/tag/v1.0.0) - 2025-11-12
 
 ### Added
+
 - **OAuth2 Authentication**: Complete OAuth2 flow with automatic token refresh and encryption
 - **Video Management**: Upload, update, delete videos with comprehensive metadata support
 - **Extended Upload Metadata**: License selection, audio language, location coordinates, recording dates, scheduled publishing
@@ -30,11 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Extensive Documentation**: Complete API reference (1000+ lines), detailed README (770+ lines), and AI assistance guide
 
 ### Framework Support
+
 - Laravel 11.x and 12.x
 - PHP 8.2 and 8.3
 - Google API Client 2.15+
 
 ### Testing
+
 - 78 passing tests with 271 assertions
 - PHPStan static analysis at max level
 - Laravel Pint code formatting
@@ -43,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unit tests for configuration and models
 
 ### Security
+
 - All OAuth tokens encrypted at rest using Laravel's Crypt facade
 - Tokens hidden in model serialization
 - CSRF protection on OAuth flow with state parameter validation
@@ -51,5 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive input validation for all metadata
 - File type and size validation for uploads
 
-[Unreleased]: https://github.com/ekstremedia/laravel-youtube/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/ekstremedia/laravel-youtube/releases/tag/v1.0.0
+## [v1.1.0 - First version released](https://github.com/ekstremedia/laravel-youtube/compare/v1.0.0...v1.1.0 - First version released) - 2025-11-12
+
+First stable version of Laravel Youtube upload package

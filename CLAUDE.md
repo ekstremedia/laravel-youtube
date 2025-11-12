@@ -129,16 +129,39 @@ laravel-youtube/
 **Purpose**: Main interface for YouTube API operations
 
 **Key Methods**:
+
+*Token Selection:*
 - `usingDefault()` - Use default (most recent) active token
 - `forChannel(string $channelId)` - Use token for specific channel
 - `forUser(int $userId, ?string $channelId = null)` - Set user context (legacy support)
 - `withToken(YouTubeToken $token)` - Use specific token
-- `uploadVideo($video, array $metadata, array $options = [])` - Upload videos
+
+*Video Operations:*
+- `uploadVideo($video, array $metadata, array $options = [])` - Upload videos with 15+ metadata fields
 - `getVideos(array $options = [])` - List videos
 - `getVideo(string $videoId, array $parts = [])` - Get video details
 - `updateVideo(string $videoId, array $metadata)` - Update metadata
 - `deleteVideo(string $videoId)` - Delete video
 - `setThumbnail(string $videoId, $thumbnail)` - Set custom thumbnail
+
+*Playlist Operations:*
+- `createPlaylist(string $title, array $options = [])` - Create new playlist
+- `getPlaylists(array $options = [])` - List playlists
+- `getPlaylist(string $playlistId)` - Get single playlist
+- `updatePlaylist(string $playlistId, array $updates)` - Update playlist
+- `deletePlaylist(string $playlistId)` - Delete playlist
+- `addVideoToPlaylist(string $videoId, string $playlistId, ?int $position = null)` - Add video to playlist
+- `removeVideoFromPlaylist(string $playlistItemId)` - Remove video from playlist
+- `getPlaylistVideos(string $playlistId, array $options = [])` - Get videos in playlist
+
+*Caption Operations:*
+- `uploadCaption(string $videoId, string $language, $captionFile, array $options = [])` - Upload captions
+- `getCaptions(string $videoId)` - List captions
+- `updateCaption(string $captionId, array $updates, $captionFile = null)` - Update captions
+- `deleteCaption(string $captionId)` - Delete captions
+- `downloadCaption(string $captionId, string $format = 'srt')` - Download captions
+
+*Channel Operations:*
 - `getChannel(array $parts = [])` - Get channel info
 
 **Features**:
@@ -293,17 +316,22 @@ laravel-youtube/
 
 **Framework**: Pest 3.x
 **Database**: SQLite in-memory
-**Total Tests**: 71 test cases
+**Total Tests**: 78 test cases (all passing ✓)
 
 **Test Categories**:
 - OAuth flow and token management
 - Video upload (simple, chunked, from path)
+- **Extended upload metadata** (license, audio language, location, recording details)
 - File size validation
 - Video CRUD operations via service
+- **Playlist operations** (create, list, update, delete, add/remove videos)
+- **Caption operations** (upload, list, update, delete, download)
 - Token refresh and expiry
 - Single-user mode
 - Rate limiting
 - Authentication
+- Backward compatibility
+- Metadata validation
 - Raspberry Pi integration scenario
 
 **Running Tests**:
@@ -413,11 +441,27 @@ YOUTUBE_LOGGING_LEVEL=debug
 ```php
 use EkstreMedia\LaravelYouTube\Facades\YouTube;
 
-// Upload video (single-user mode)
+// Upload video with basic metadata (single-user mode)
 $video = YouTube::usingDefault()->uploadVideo($file, [
     'title' => 'My Video',
     'description' => 'Description',
     'privacy_status' => 'private',
+]);
+
+// Upload with extended metadata
+$video = YouTube::usingDefault()->uploadVideo($file, [
+    'title' => 'My Video',
+    'description' => 'Description',
+    'privacy_status' => 'private',
+    'license' => 'creativeCommon',
+    'default_audio_language' => 'en-US',
+    'location' => [
+        'latitude' => 59.9139,
+        'longitude' => 10.7522,
+        'description' => 'Oslo, Norway',
+    ],
+    'recording_date' => now()->toIso8601String(),
+    'publish_at' => now()->addDay()->toIso8601String(), // Schedule
 ]);
 
 // Upload for specific user (legacy/multi-user support)
@@ -435,6 +479,15 @@ YouTube::usingDefault()->updateVideo('video-id', [
     'title' => 'New Title',
     'privacy_status' => 'public',
 ]);
+
+// Create and manage playlists
+$playlist = YouTube::usingDefault()->createPlaylist('My Playlist', [
+    'privacy_status' => 'public',
+]);
+YouTube::usingDefault()->addVideoToPlaylist('video-id', $playlist['id']);
+
+// Upload captions
+YouTube::usingDefault()->uploadCaption('video-id', 'en', '/path/to/captions.srt');
 
 // Get channel info
 $channel = YouTube::usingDefault()->getChannel();

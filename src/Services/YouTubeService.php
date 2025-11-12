@@ -343,6 +343,10 @@ class YouTubeService
                 $snippet->setDefaultLanguage($metadata['default_language']);
             }
 
+            if (isset($metadata['default_audio_language'])) {
+                $snippet->setDefaultAudioLanguage($metadata['default_audio_language']);
+            }
+
             $youtubeVideo->setSnippet($snippet);
 
             // Set status
@@ -361,7 +365,46 @@ class YouTubeService
                 $status->setPublishAt($metadata['publish_at']);
             }
 
+            if (isset($metadata['license'])) {
+                $status->setLicense($metadata['license']);
+            }
+
+            if (isset($metadata['self_declared_made_for_kids'])) {
+                $status->setSelfDeclaredMadeForKids($metadata['self_declared_made_for_kids']);
+            }
+
+            if (isset($metadata['public_stats_viewable'])) {
+                $status->setPublicStatsViewable($metadata['public_stats_viewable']);
+            }
+
             $youtubeVideo->setStatus($status);
+
+            // Set recording details if provided
+            if (isset($metadata['recording_date']) || isset($metadata['location'])) {
+                $recordingDetails = new \Google_Service_YouTube_VideoRecordingDetails;
+
+                if (isset($metadata['recording_date'])) {
+                    $recordingDetails->setRecordingDate($metadata['recording_date']);
+                }
+
+                if (isset($metadata['location'])) {
+                    $location = new \Google_Service_YouTube_GeoPoint;
+                    $location->setLatitude($metadata['location']['latitude']);
+                    $location->setLongitude($metadata['location']['longitude']);
+
+                    if (isset($metadata['location']['altitude'])) {
+                        $location->setAltitude($metadata['location']['altitude']);
+                    }
+
+                    $recordingDetails->setLocation($location);
+
+                    if (isset($metadata['location']['description'])) {
+                        $recordingDetails->setLocationDescription($metadata['location']['description']);
+                    }
+                }
+
+                $youtubeVideo->setRecordingDetails($recordingDetails);
+            }
 
             // Configure upload
             $chunkSize = $options['chunk_size'] ?? $this->config['upload']['chunk_size'] ?? (1 * 1024 * 1024);
@@ -369,7 +412,11 @@ class YouTubeService
             $client->setDefer(true);
 
             // Create upload request
-            $insertRequest = $this->youtube->videos->insert('snippet,status', $youtubeVideo);
+            $parts = 'snippet,status';
+            if (isset($metadata['recording_date']) || isset($metadata['location'])) {
+                $parts .= ',recordingDetails';
+            }
+            $insertRequest = $this->youtube->videos->insert($parts, $youtubeVideo);
 
             // Create media upload
             $media = new Google_Http_MediaFileUpload(
@@ -868,6 +915,576 @@ class YouTubeService
 
         if (! empty($allowedExtensions) && ! in_array($extension, $allowedExtensions)) {
             throw new UploadException("Invalid file extension: {$extension}. Allowed: " . implode(', ', $allowedExtensions));
+        }
+    }
+
+    /**
+     * Create a new playlist
+     *
+     * @throws YouTubeException
+     */
+    public function createPlaylist(string $title, array $options = []): array
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $playlist = new \Google_Service_YouTube_Playlist;
+
+            // Set snippet
+            $snippet = new \Google_Service_YouTube_PlaylistSnippet;
+            $snippet->setTitle($title);
+
+            if (isset($options['description'])) {
+                $snippet->setDescription($options['description']);
+            }
+
+            if (isset($options['tags'])) {
+                $snippet->setTags($options['tags']);
+            }
+
+            if (isset($options['default_language'])) {
+                $snippet->setDefaultLanguage($options['default_language']);
+            }
+
+            $playlist->setSnippet($snippet);
+
+            // Set status
+            $status = new \Google_Service_YouTube_PlaylistStatus;
+            $status->setPrivacyStatus($options['privacy_status'] ?? 'private');
+            $playlist->setStatus($status);
+
+            // Create playlist
+            $response = $this->youtube->playlists->insert('snippet,status', $playlist);
+
+            Log::info('Playlist created successfully', [
+                'playlist_id' => $response->getId(),
+                'title' => $title,
+            ]);
+
+            return $this->formatPlaylistData($response);
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Get playlists for the authenticated channel
+     *
+     * @throws YouTubeException
+     */
+    public function getPlaylists(array $options = []): array
+    {
+        $this->ensureAuthenticated();
+
+        $defaults = [
+            'maxResults' => 50,
+            'mine' => true,
+        ];
+
+        $params = array_merge($defaults, $options);
+
+        try {
+            $response = $this->youtube->playlists->listPlaylists(
+                'snippet,contentDetails,status',
+                $params
+            );
+
+            $playlists = [];
+            foreach ($response->getItems() as $item) {
+                $playlists[] = $this->formatPlaylistData($item);
+            }
+
+            return [
+                'playlists' => $playlists,
+                'nextPageToken' => $response->getNextPageToken(),
+                'prevPageToken' => $response->getPrevPageToken(),
+                'totalResults' => $response->getPageInfo()->getTotalResults(),
+            ];
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Get a single playlist by ID
+     *
+     * @throws YouTubeException
+     */
+    public function getPlaylist(string $playlistId): array
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $response = $this->youtube->playlists->listPlaylists('snippet,contentDetails,status', [
+                'id' => $playlistId,
+            ]);
+
+            if (! $response->getItems() || count($response->getItems()) === 0) {
+                throw new YouTubeException("Playlist not found: {$playlistId}");
+            }
+
+            return $this->formatPlaylistData($response->getItems()[0]);
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Update a playlist
+     *
+     * @throws YouTubeException
+     */
+    public function updatePlaylist(string $playlistId, array $updates): array
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            // Get existing playlist
+            $response = $this->youtube->playlists->listPlaylists('snippet,status', [
+                'id' => $playlistId,
+            ]);
+
+            if (! $response->getItems()) {
+                throw new YouTubeException("Playlist not found: {$playlistId}");
+            }
+
+            $playlist = $response->getItems()[0];
+
+            // Update snippet if provided
+            if (isset($updates['title']) || isset($updates['description']) || isset($updates['tags'])) {
+                $snippet = $playlist->getSnippet();
+
+                if (isset($updates['title'])) {
+                    $snippet->setTitle($updates['title']);
+                }
+                if (isset($updates['description'])) {
+                    $snippet->setDescription($updates['description']);
+                }
+                if (isset($updates['tags'])) {
+                    $snippet->setTags($updates['tags']);
+                }
+
+                $playlist->setSnippet($snippet);
+            }
+
+            // Update status if provided
+            if (isset($updates['privacy_status'])) {
+                $status = $playlist->getStatus();
+                $status->setPrivacyStatus($updates['privacy_status']);
+                $playlist->setStatus($status);
+            }
+
+            // Update playlist
+            $updatedPlaylist = $this->youtube->playlists->update('snippet,status', $playlist);
+
+            Log::info('Playlist updated successfully', [
+                'playlist_id' => $playlistId,
+                'updates' => array_keys($updates),
+            ]);
+
+            return $this->formatPlaylistData($updatedPlaylist);
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Delete a playlist
+     *
+     * @throws YouTubeException
+     */
+    public function deletePlaylist(string $playlistId): bool
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $this->youtube->playlists->delete($playlistId);
+
+            Log::info('Playlist deleted successfully', ['playlist_id' => $playlistId]);
+
+            return true;
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Add a video to a playlist
+     *
+     * @throws YouTubeException
+     */
+    public function addVideoToPlaylist(string $videoId, string $playlistId, ?int $position = null): array
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $playlistItem = new \Google_Service_YouTube_PlaylistItem;
+
+            $snippet = new \Google_Service_YouTube_PlaylistItemSnippet;
+            $snippet->setPlaylistId($playlistId);
+
+            $resourceId = new \Google_Service_YouTube_ResourceId;
+            $resourceId->setKind('youtube#video');
+            $resourceId->setVideoId($videoId);
+            $snippet->setResourceId($resourceId);
+
+            if ($position !== null) {
+                $snippet->setPosition($position);
+            }
+
+            $playlistItem->setSnippet($snippet);
+
+            $response = $this->youtube->playlistItems->insert('snippet', $playlistItem);
+
+            Log::info('Video added to playlist successfully', [
+                'video_id' => $videoId,
+                'playlist_id' => $playlistId,
+            ]);
+
+            return [
+                'id' => $response->getId(),
+                'video_id' => $videoId,
+                'playlist_id' => $playlistId,
+                'position' => $response->getSnippet()->getPosition(),
+            ];
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Remove a video from a playlist
+     *
+     * @throws YouTubeException
+     */
+    public function removeVideoFromPlaylist(string $playlistItemId): bool
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $this->youtube->playlistItems->delete($playlistItemId);
+
+            Log::info('Video removed from playlist successfully', [
+                'playlist_item_id' => $playlistItemId,
+            ]);
+
+            return true;
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Get videos in a playlist
+     *
+     * @throws YouTubeException
+     */
+    public function getPlaylistVideos(string $playlistId, array $options = []): array
+    {
+        $this->ensureAuthenticated();
+
+        $defaults = [
+            'maxResults' => 50,
+            'playlistId' => $playlistId,
+        ];
+
+        $params = array_merge($defaults, $options);
+
+        try {
+            $response = $this->youtube->playlistItems->listPlaylistItems(
+                'snippet,contentDetails,status',
+                $params
+            );
+
+            $videos = [];
+            foreach ($response->getItems() as $item) {
+                $videos[] = [
+                    'playlist_item_id' => $item->getId(),
+                    'video_id' => $item->getContentDetails()->getVideoId(),
+                    'title' => $item->getSnippet()->getTitle(),
+                    'description' => $item->getSnippet()->getDescription(),
+                    'position' => $item->getSnippet()->getPosition(),
+                    'published_at' => $item->getSnippet()->getPublishedAt(),
+                ];
+            }
+
+            return [
+                'videos' => $videos,
+                'nextPageToken' => $response->getNextPageToken(),
+                'prevPageToken' => $response->getPrevPageToken(),
+                'totalResults' => $response->getPageInfo()->getTotalResults(),
+            ];
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Format playlist data
+     *
+     * @param  mixed  $playlist
+     */
+    protected function formatPlaylistData($playlist): array
+    {
+        $data = [
+            'id' => $playlist->getId(),
+        ];
+
+        if ($snippet = $playlist->getSnippet()) {
+            $data['title'] = $snippet->getTitle();
+            $data['description'] = $snippet->getDescription();
+            $data['published_at'] = $snippet->getPublishedAt();
+            $data['channel_id'] = $snippet->getChannelId();
+            $data['channel_title'] = $snippet->getChannelTitle();
+            $data['tags'] = $snippet->getTags();
+
+            if ($thumbnails = $snippet->getThumbnails()) {
+                $data['thumbnails'] = [
+                    'default' => $thumbnails->getDefault() ? $thumbnails->getDefault()->getUrl() : null,
+                    'medium' => $thumbnails->getMedium() ? $thumbnails->getMedium()->getUrl() : null,
+                    'high' => $thumbnails->getHigh() ? $thumbnails->getHigh()->getUrl() : null,
+                ];
+            }
+        }
+
+        if ($status = $playlist->getStatus()) {
+            $data['privacy_status'] = $status->getPrivacyStatus();
+        }
+
+        if ($contentDetails = $playlist->getContentDetails()) {
+            $data['item_count'] = $contentDetails->getItemCount();
+        }
+
+        return $data;
+    }
+
+    /**
+     * Upload captions/subtitles for a video
+     *
+     * @param  UploadedFile|string  $captionFile  Path to SRT, VTT, or TTML file
+     *
+     * @throws YouTubeException
+     */
+    public function uploadCaption(string $videoId, string $language, $captionFile, array $options = []): array
+    {
+        $this->ensureAuthenticated();
+
+        $captionPath = $captionFile instanceof UploadedFile
+            ? $captionFile->getPathname()
+            : $captionFile;
+
+        if (! file_exists($captionPath)) {
+            throw new YouTubeException("Caption file not found: {$captionPath}");
+        }
+
+        try {
+            $caption = new \Google_Service_YouTube_Caption;
+
+            $snippet = new \Google_Service_YouTube_CaptionSnippet;
+            $snippet->setVideoId($videoId);
+            $snippet->setLanguage($language);
+            $snippet->setName($options['name'] ?? $language);
+            $snippet->setIsDraft($options['is_draft'] ?? false);
+
+            $caption->setSnippet($snippet);
+
+            $client = $this->authService->getClient();
+            $client->setDefer(true);
+
+            $insertRequest = $this->youtube->captions->insert('snippet', $caption);
+
+            $media = new Google_Http_MediaFileUpload(
+                $client,
+                $insertRequest,
+                'application/octet-stream',
+                null,
+                true,
+                1 * 1024 * 1024
+            );
+
+            $media->setFileSize(filesize($captionPath));
+
+            $status = false;
+            $handle = fopen($captionPath, 'rb');
+
+            while (! $status && ! feof($handle)) {
+                $chunk = fread($handle, 1 * 1024 * 1024);
+                $status = $media->nextChunk($chunk);
+            }
+
+            fclose($handle);
+            $client->setDefer(false);
+
+            Log::info('Caption uploaded successfully', [
+                'video_id' => $videoId,
+                'language' => $language,
+            ]);
+
+            return [
+                'id' => $status['id'],
+                'video_id' => $videoId,
+                'language' => $language,
+                'name' => $status['snippet']['name'],
+            ];
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * List captions for a video
+     *
+     * @throws YouTubeException
+     */
+    public function getCaptions(string $videoId): array
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $response = $this->youtube->captions->listCaptions('snippet', $videoId);
+
+            $captions = [];
+            foreach ($response->getItems() as $item) {
+                $captions[] = [
+                    'id' => $item->getId(),
+                    'language' => $item->getSnippet()->getLanguage(),
+                    'name' => $item->getSnippet()->getName(),
+                    'track_kind' => $item->getSnippet()->getTrackKind(),
+                    'is_draft' => $item->getSnippet()->getIsDraft(),
+                    'is_cc' => $item->getSnippet()->getIsCC(),
+                    'is_auto_synced' => $item->getSnippet()->getIsAutoSynced(),
+                ];
+            }
+
+            return $captions;
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Update a caption track
+     *
+     * @param  UploadedFile|string|null  $captionFile  New caption file (optional)
+     *
+     * @throws YouTubeException
+     */
+    public function updateCaption(string $captionId, array $updates, $captionFile = null): array
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            // Get existing caption
+            $response = $this->youtube->captions->listCaptions('snippet', null, [
+                'id' => $captionId,
+            ]);
+
+            if (! $response->getItems()) {
+                throw new YouTubeException("Caption not found: {$captionId}");
+            }
+
+            $caption = $response->getItems()[0];
+            $snippet = $caption->getSnippet();
+
+            // Update snippet
+            if (isset($updates['name'])) {
+                $snippet->setName($updates['name']);
+            }
+            if (isset($updates['is_draft'])) {
+                $snippet->setIsDraft($updates['is_draft']);
+            }
+
+            $caption->setSnippet($snippet);
+
+            // If a new caption file is provided, upload it
+            if ($captionFile) {
+                $captionPath = $captionFile instanceof UploadedFile
+                    ? $captionFile->getPathname()
+                    : $captionFile;
+
+                if (! file_exists($captionPath)) {
+                    throw new YouTubeException("Caption file not found: {$captionPath}");
+                }
+
+                $client = $this->authService->getClient();
+                $client->setDefer(true);
+
+                $updateRequest = $this->youtube->captions->update('snippet', $caption);
+
+                $media = new Google_Http_MediaFileUpload(
+                    $client,
+                    $updateRequest,
+                    'application/octet-stream',
+                    null,
+                    true,
+                    1 * 1024 * 1024
+                );
+
+                $media->setFileSize(filesize($captionPath));
+
+                $status = false;
+                $handle = fopen($captionPath, 'rb');
+
+                while (! $status && ! feof($handle)) {
+                    $chunk = fread($handle, 1 * 1024 * 1024);
+                    $status = $media->nextChunk($chunk);
+                }
+
+                fclose($handle);
+                $client->setDefer(false);
+            } else {
+                // Just update metadata
+                $status = $this->youtube->captions->update('snippet', $caption);
+            }
+
+            Log::info('Caption updated successfully', ['caption_id' => $captionId]);
+
+            return [
+                'id' => is_array($status) ? $status['id'] : $status->getId(),
+                'language' => is_array($status) ? $status['snippet']['language'] : $status->getSnippet()->getLanguage(),
+            ];
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Delete a caption track
+     *
+     * @throws YouTubeException
+     */
+    public function deleteCaption(string $captionId): bool
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $this->youtube->captions->delete($captionId);
+
+            Log::info('Caption deleted successfully', ['caption_id' => $captionId]);
+
+            return true;
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
+        }
+    }
+
+    /**
+     * Download a caption track
+     *
+     * @throws YouTubeException
+     */
+    public function downloadCaption(string $captionId, string $format = 'srt'): string
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $response = $this->youtube->captions->download($captionId, [
+                'tfmt' => $format, // srt, vtt, ttml, sbv
+            ]);
+
+            return $response->getBody()->getContents();
+        } catch (\Google_Service_Exception $e) {
+            throw $this->handleGoogleException($e);
         }
     }
 }
